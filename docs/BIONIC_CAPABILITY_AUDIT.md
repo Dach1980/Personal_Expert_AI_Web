@@ -1,125 +1,88 @@
-# LM Studio Bionic — предварительный аудит интеграции
+# Bionic GPT — аудит интеграции для Personal Expert AI
 
-Дата проверки документации: 2026-11-03.
+**Целевой продукт:** [bionic-gpt/bionic-gpt](https://github.com/bionic-gpt/bionic-gpt). Это именно Bionic GPT — самостоятельная open-source платформа, которую пользователь указал для проекта. Это НЕ LM Studio Bionic и НЕ репозиторий `bionic-gpt/bionic` (такой адрес не является нужным исходным репозиторием).
 
-## Идентификация продукта
+Дата сверки публичных материалов: 3 ноября 2026 года.
 
-Проверяется именно **LM Studio Bionic** — отдельное приложение LM Studio для agentic-задач с открытыми моделями. Это не Bionic-GPT и не другой одноимённый проект.
+## Что это за платформа
 
-Официальные материалы:
-- Bionic overview: https://lmstudio.ai/docs/bionic
-- Projects and Sessions: https://lmstudio.ai/docs/bionic/projects-and-sessions
-- Quick Start: https://lmstudio.ai/docs/bionic/quick-start
-- Working with Documents: https://lmstudio.ai/docs/bionic/agent/work-project
-- Bionic local API: https://lmstudio.ai/blog/muse-glimmer
-- Bionic changelog: https://lmstudio.ai/changelog
-- LM Studio REST API: https://lmstudio.ai/docs/developer/rest
+Bionic GPT позиционируется как self-hosted enterprise AI platform. В README проекта перечислены:
+- AI workspace и история диалогов;
+- подключение hosted, private и local моделей;
+- RAG и datasets;
+- runtime инструментов и sandboxed code execution;
+- virtual filesystem для вложений, datasets, skills и артефактов;
+- identity, teams, permissions, audit и usage controls;
+- PostgreSQL persistence и object storage.
 
-## Предварительная матрица возможностей
+Основной репозиторий: https://github.com/bionic-gpt/bionic-gpt  
+Документация: https://bionic-gpt.com/docs/  
+Локальный запуск через Docker Compose (PoC): https://bionic-gpt.com/docs/running-locally/docker-compose/
 
-| Требование Personal Expert AI | Что подтверждено документацией | Предварительный вывод |
+## Предварительная оценка соответствия
+
+| Требование | По публичной документации | Что ещё необходимо проверить |
 |---|---|---|
-| Независимые проекты и рабочие пространства | Bionic Projects объединяют файлы и несколько Sessions; отдельные сессии могут иметь общий проектный контекст | Функция есть в самом приложении. Внешний CRUD API проектов пока не подтверждён |
-| Пользовательская авторизация | В просмотренной документации Bionic не найден контракт внешнего управления пользователями, ролями и сессиями приложения | Не считать готовой multi-user авторизацией Personal Expert AI |
-| История диалогов | Bionic Sessions — отдельные task/conversation threads; доступны pin, rename, archive, delete | История есть внутри Bionic. Внешнее чтение/запись истории через публичный API пока не подтверждены |
-| Потоковая генерация | Bionic Local Model API описан как OpenAI Chat Completions-compatible; API LM Studio поддерживает streaming | Хороший кандидат для теста генерации. Нужно проверить реальный формат событий конкретной версии Bionic |
-| Работа с документами / RAG | Bionic Work Projects принимают файлы и используют их как контекст; Project Files общие для сессий проекта | Работа с документами подтверждена как функция агента. Не подтверждены API загрузки, retrieval-фильтры и структурированные ссылки на точные страницы |
-| Источники и страницы | Документация подтверждает document workflows и file previews, но просмотренные страницы не задают контракт citation с documentId/page/offset | Требуется отдельный эксперимент на PDF с известными страницами и проверка происхождения каждого фрагмента |
-| Разграничение доступа | В просмотренных материалах нет публичного контракта tenant/project ACL, проверки доступа к каждому документу и изоляции RAG | Критическая функция остаётся ответственностью нашего backend, пока не доказано обратное |
+| Независимые проекты / workspaces | Есть понятия workspace, projects и datasets в платформе | Проверить модель владения, CRUD и API для интеграции с внешним UI |
+| Пользовательская авторизация | Заявлены Identity, SSO/OIDC и team-based permissions | Проверить community edition, конфигурацию IdP, роли и API auth |
+| История диалогов | История conversations заявлена как базовая функция | Проверить endpoints, pagination, export и ownership |
+| Streaming | Платформа описывает OpenAI-compatible API | Проверить stream протокол, события, отмену и ошибки на выбранной версии |
+| RAG | Заявлены knowledge search, datasets и RAG pipelines | Проверить индексацию PDF, retrieval, метаданные и фильтрацию по ACL |
+| Источники и страницы документов | Работа с документами и RAG заявлены | Отдельно подтвердить citations с document ID, номером страницы и открытием исходного фрагмента |
+| Разграничение доступа | Заявлены teams, permissions, audit | Проверить реальное enforcement на уровне project, dataset, conversation и retrieval |
 
-## Что подтверждено
+Важно: наличие функции в платформе не означает автоматически, что все операции доступны через стабильный внешний API. Это выясняется по API-документации и runtime-тесту.
 
-1. Bionic — отдельное приложение, а не просто UI-обёртка LM Studio.
-2. Projects объединяют сессии и файлы; несколько сессий могут использовать общий контекст проекта.
-3. Bionic поддерживает локальные модели, модели на удалённом устройстве через LM Link и опциональные cloud-модели. Для нашей проверки необходимо выбрать именно Local.
-4. В Bionic есть отдельная функция Local Model API. В официальном материале LM Studio описан OpenAI Chat Completions-compatible API для автоматизации и локальных batch jobs.
-5. Начиная с Bionic 1.1.8 и LM Studio 0.4.26 поддерживается совместная работа двух приложений: Bionic использует LM Studio для локального inference, когда LM Studio запущен.
+## Предлагаемая архитектура
 
-## Предварительная архитектурная рекомендация
-
-Не использовать Bionic как основную БД и источник истины для:
-- пользователей и авторизации;
-- tenant/project membership и ролей;
-- документов, версий и метаданных;
-- истории диалогов Personal Expert AI;
-- политик доступа и фильтрации RAG.
-
-Использовать Bionic как экспериментальный локальный агентный/inference-компонент за нашим API Adapter, если тесты подтвердят стабильный локальный API и нужное качество работы с документами.
-
-Целевая схема:
+На первом этапе целесообразно использовать Bionic GPT как self-hosted backend-платформу, а не переписывать её функции в собственном frontend.
 
 ```text
-React frontend (GitHub Pages)
+React + TypeScript frontend
+      GitHub Pages
           |
-          | HTTPS + cookie session
+          | HTTPS
           v
-Personal Expert AI API Gateway
+Bionic GPT deployment
+  - identity / teams / permissions
+  - workspaces / conversations
+  - RAG / datasets
+  - model provider
           |
-          +---- PostgreSQL: users / tenants / projects / conversations
-          |
-          +---- Document pipeline + vector index + ACL filtering
-          |
-          +---- Bionic Local Model API (experimental provider)
-          |
-          +---- LM Studio API (independent inference provider)
+          v
+Local / private model endpoint
+
+Дополнительный Personal Expert AI layer:
+  - domain-specific document lifecycle
+  - engineering document metadata
+  - normative editions and clauses
+  - page-level evidence contract
+  - specialized review workflow
 ```
 
-Наличие Local Model API не означает, что внешний клиент получает управление внутренними Bionic Projects/Sessions. Это два разных уровня возможностей, которые необходимо проверять отдельно.
+При этом frontend не должен хранить секреты и напрямую обращаться к приватным адресам. Для внешней публикации потребуется HTTPS backend endpoint и корректная CORS/auth конфигурация. GitHub Pages — только статический хостинг; он не исполняет Rust backend, PostgreSQL, object storage или inference.
 
-## Практический тест-план
+## Ограничения текущего этапа
 
-### A. Зафиксировать среду
+Пользователь пока не имеет доступа к LM Studio/Bionic runtime. Поэтому:
+- не устанавливаем Bionic наугад;
+- не заявляем, что API уже проверен;
+- не придумываем endpoints;
+- не отправляем проектные документы в сторонние облачные модели;
+- продолжаем развивать frontend и интеграционный контракт по публичному коду и документации.
 
-- [ ] Записать точные версии Bionic и LM Studio.
-- [ ] Проверить, что обе программы запущены на одной тестовой машине.
-- [ ] Выбрать только локальную модель; убедиться, что Cloud/Remote не используются.
-- [ ] Включить Local Model API в настройках Bionic и зафиксировать фактический base URL и порт.
-- [ ] Проверить, как меняется endpoint при одновременном запуске LM Studio и Bionic.
-- [ ] Установить режим аутентификации локального API и проверить, можно ли использовать токен.
+## План проверки по репозиторию
 
-### B. API inference
+1. Зафиксировать релиз/commit Bionic GPT, который выберем для тестирования.
+2. Изучить Docker Compose и Kubernetes deployment, сервисы, порты, volumes и secrets.
+3. Разобрать OpenAPI/API schema и auth flow из исходного кода и документации.
+4. Найти точные API методы для users, teams, workspaces/projects, conversations, datasets/documents.
+5. Проверить streaming и citation payload.
+6. Проверить permissions enforcement и изоляцию retrieval.
+7. Подготовить совместимый API adapter только после подтверждения реальных маршрутов.
 
-- [ ] GET /v1/models — получить доступные модели, если этот маршрут предоставлен выбранным Local Model API.
-- [ ] POST /v1/chat/completions — обычный запрос.
-- [ ] Тот же запрос с stream=true.
-- [ ] Проверить tool calls, изображения и длинный контекст.
-- [ ] Проверить отмену запроса, timeout и поведение при остановке модели.
-- [ ] Сравнить результат Bionic Local Model API и прямого LM Studio API на одной модели.
+## Решение на данный момент
 
-Маршруты выше — тестовые гипотезы для OpenAI-compatible API, а не подтверждённый исчерпывающий список Bionic endpoints. Проверять по фактическому серверу.
+Bionic GPT выглядит гораздо более близким к нашей задаче, чем ранее ошибочно рассмотренный LM Studio Bionic: в его публичном описании прямо заявлены workspace, RAG, identity, teams, permissions и audit. Следующий этап — статический аудит исходного кода и API-контрактов Bionic GPT, затем разработка UI под подтверждённые возможности.
 
-### C. Projects, Sessions и история
-
-- [ ] Создать два проекта через интерфейс Bionic.
-- [ ] Создать несколько сессий в каждом проекте.
-- [ ] Проверить, какие данные общие внутри проекта.
-- [ ] Найти документированный или наблюдаемый внешний способ перечислить проекты и сессии.
-- [ ] Проверить чтение истории, пагинацию, порядок сообщений, переименование и удаление.
-- [ ] Не использовать внутренние/недокументированные endpoints в production без отдельного решения о рисках.
-
-### D. Documents / RAG / citations
-
-- [ ] Загрузить тестовый PDF с уникальными контрольными фразами на нескольких известных страницах.
-- [ ] Задать вопросы, ответы на которые можно получить только с разных страниц.
-- [ ] Проверить точность ответов и устойчивость к отсутствующим сведениям.
-- [ ] Проверить, возвращает ли API машинно-читаемые citations с идентификатором документа и номером страницы.
-- [ ] Проверить, можно ли получить оригинальную страницу/фрагмент для проверки пользователем.
-- [ ] Повторить тест с двумя проектами и одинаковыми названиями файлов.
-
-### E. Security / ACL
-
-- [ ] Создать два тестовых профиля в нашем backend.
-- [ ] Назначить им разные проекты и документы.
-- [ ] Попытаться получить conversation/document/citation другого пользователя, подменяя ID.
-- [ ] Убедиться, что retrieval фильтруется по правам до передачи контекста модели.
-- [ ] Убедиться, что Bionic Local Model API недоступен из публичного интернета и секреты не попадают в браузер.
-
-## Критерии решения
-
-Bionic можно подключить как провайдер inference/agent только после прохождения тестов API и локального режима.
-
-Bionic можно рассматривать как замену части backend project/session/document management только при наличии документированного и проверенного внешнего API, а также подтверждённой модели авторизации и ACL. Пока таких доказательств нет, эти функции остаются в Personal Expert AI.
-
-## Текущий статус
-
-**Документальный аудит завершён частично. Реальный runtime-тест не выполнен.** Для runtime-теста необходим запущенный экземпляр Bionic и его Local Model API на машине, где доступен тестовый backend. Публичный GitHub Pages frontend не может безопасно обращаться к localhost пользователя напрямую.
+**Runtime integration: NOT TESTED.** Для неё позже потребуется доступ к среде, где можно запустить Bionic GPT и настроить локальный/private model provider.
