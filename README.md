@@ -21,7 +21,7 @@
 Требуется Node.js 22 и npm:
 
 ```bash
-npm ci
+npm install
 npm run dev
 ```
 
