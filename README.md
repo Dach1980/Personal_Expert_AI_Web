@@ -60,5 +60,5 @@ GitHub Pages размещает только статические файлы. 
 ## Документация
 
 - [API Adapter contract](docs/API_ADAPTER.md)
-- [LM Studio Bionic capability audit](docs/BIONIC_CAPABILITY_AUDIT.md)
+- [Bionic GPT capability audit](docs/BIONIC_CAPABILITY_AUDIT.md)
 - [Deployment](docs/DEPLOYMENT.md)
