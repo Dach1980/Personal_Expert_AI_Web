@@ -1,0 +1,1 @@
+export interface Project{id:string;name:string;description:string;code:string}export interface ChatMessage{id:string;role:'user'|'assistant';content:string;createdAt:string}export interface Session{authenticated:boolean;userId?:string;displayName?:string}
