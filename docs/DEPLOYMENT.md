@@ -2,19 +2,27 @@
 
 ## Frontend
 
-GitHub Pages публикует статический frontend. Включить Settings → Pages → Build and deployment → GitHub Actions.
+Frontend — React + TypeScript + Vite. GitHub Actions выполняет `npm ci`, `npm run build` и публикует каталог `dist` в GitHub Pages.
 
-## Backend Gateway / Bionic
+В GitHub включить Settings → Pages → Build and deployment → Source: GitHub Actions.
 
-Запускаются отдельно на сервере или в локальной инфраструктуре. Для доступа браузера необходим HTTPS и ограниченный CORS. Публичный сайт не может обращаться к localhost компьютера разработчика как к серверу.
+Vite base path сейчас настроен для репозитория `/Personal_Expert_AI_Web/`. При переносе на custom domain настройку нужно изменить.
+
+## API Adapter / Bionic
+
+Backend gateway и Bionic запускаются отдельно — на сервере или в локальной инфраструктуре. Для доступа браузера требуется HTTPS и CORS с точным allowlist origin.
+
+Публичный сайт не может обращаться к localhost компьютера разработчика как к серверу. Не помещать секреты в `VITE_*` переменные: Vite встраивает их в клиентский bundle.
 
 ## LM Studio
 
-LM Studio должен быть доступен Bionic/gateway по приватному сетевому адресу. Не публиковать порт LM Studio в интернет. Проверить отдельно:
+LM Studio должен быть доступен Bionic/gateway по приватному сетевому адресу. Не публиковать порт LM Studio в интернет.
+
+Отдельно проверить:
 - список моделей;
 - chat completions;
 - streaming;
 - embeddings;
-- tool/function calling для выбранной модели.
+- tool/function calling выбранной модели.
 
 Наличие OpenAI-compatible API не гарантирует совместимость всех функций Bionic.
