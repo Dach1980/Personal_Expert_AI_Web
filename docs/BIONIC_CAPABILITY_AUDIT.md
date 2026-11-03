@@ -86,3 +86,31 @@ Local / private model endpoint
 Bionic GPT выглядит гораздо более близким к нашей задаче, чем ранее ошибочно рассмотренный LM Studio Bionic: в его публичном описании прямо заявлены workspace, RAG, identity, teams, permissions и audit. Следующий этап — статический аудит исходного кода и API-контрактов Bionic GPT, затем разработка UI под подтверждённые возможности.
 
 **Runtime integration: NOT TESTED.** Для неё позже потребуется доступ к среде, где можно запустить Bionic GPT и настроить локальный/private model provider.
+
+## Проверенные детали по официальной документации
+
+Публичные материалы Bionic GPT подтверждают более конкретные возможности, чем было известно на предыдущем этапе:
+
+- API key используется как Bearer token для OpenAI-compatible API.
+- `GET /v1/models` возвращает список моделей.
+- `POST /v1/chat/completions` поддерживает параметр `stream: true`.
+- Документная загрузка поддерживается через `POST /v1/document_upload`; API key предварительно связывается с Dataset.
+- Teams позволяют управлять доступом к datasets, Projects и другим общим ресурсам.
+- Для моделей можно указывать OpenAI-compatible endpoint; документация также описывает подключение Ollama как локального inference engine.
+
+Источники:
+- API: https://bionic-gpt.com/docs/guides/api/
+- Document pipelines: https://bionic-gpt.com/docs/guides/uploading-documents/
+- Teams: https://bionic-gpt.com/docs/guides/teams/
+- Managing models: https://bionic-gpt.com/docs/guides/managing-models/
+- Ollama: https://bionic-gpt.com/docs/running-locally/ollama/
+
+### Что это означает для нашего проекта
+
+1. Для первого прототипа нам, вероятно, не потребуется писать собственный inference server: Bionic GPT уже предоставляет OpenAI-compatible chat API.
+2. Для загрузки документов есть отдельный API, но необходимо проверить, как возвращаются идентификаторы документов, статусы обработки, ошибки и связь с Dataset.
+3. Team-based permissions и Projects заявлены, однако нужно провести отрицательные тесты: пользователь из Team A не должен получить документы/цитаты Team B через chat или retrieval.
+4. Публичный API пример подтверждает модели и chat completions, но не подтверждает универсальные CRUD endpoints для внешнего управления всеми сущностями UI. Не следует выдумывать такие маршруты.
+5. Поддержка Ollama означает, что отсутствие LM Studio не блокирует потенциальное использование Bionic GPT. Но для работы всё равно нужен доступный inference endpoint (локальный, частный или внешний, который пользователь осознанно выберет).
+
+**Обновлённый статус:** документально подтверждены базовый OpenAI-compatible API, Bearer API key, document upload API, team permissions и подключение Ollama. Не проверены фактический runtime, точные citation payloads с номерами страниц, streaming на установленной версии и enforcement ACL на реальных запросах.
