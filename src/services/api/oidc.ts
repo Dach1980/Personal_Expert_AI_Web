@@ -136,12 +136,15 @@ export async function getAccessToken(): Promise<string> {
 
 export function endLoginSession(): void {
   const base = requireConfig();
+  const idToken = tokens?.id_token;
   tokens = null;
   expiresAt = 0;
   const logout = new URL(`${base}/protocol/openid-connect/logout`);
-  logout.search = new URLSearchParams({
+  const parameters = new URLSearchParams({
     client_id: clientId,
     post_logout_redirect_uri: redirectUri,
-  }).toString();
+  });
+  if (idToken) parameters.set('id_token_hint', idToken);
+  logout.search = parameters.toString();
   window.location.assign(logout.toString());
 }
