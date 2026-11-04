@@ -1,14 +1,17 @@
 import type { ChatMessage, Conversation, Project, Session } from '../../types';
 import type { ExpertApi, SendMessageInput } from './types';
+import { beginLogin, endLoginSession, getAccessToken, initializeOidc } from './oidc';
 
-const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\\/$/, '');
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\\/+$/, '');
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!BASE) throw new Error('API Adapter не настроен.');
+  const accessToken = await getAccessToken();
   const response = await fetch(BASE + path, {
     ...init,
-    credentials: 'include',
+    credentials: 'omit',
     headers: {
+      Authorization: `Bearer ${accessToken}`,
       ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
       Accept: 'application/json',
       ...init?.headers,
@@ -27,11 +30,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 const scope = (tenantId: string, projectId: string) =>
-  `/api/v1/tenants/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}`;
+  `/api/pea/tenants/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}`;
 
 export const apiClient: ExpertApi = {
-  getSession: () => request<Session>('/api/v1/session'),
-  getProjects: () => request<Project[]>('/api/v1/projects'),
+  initializeAuth: initializeOidc,
+  login: beginLogin,
+  logout: endLoginSession,
+  getSession: () => request<Session>('/api/pea/session'),
+  getProjects: () => request<Project[]>('/api/pea/projects'),
   getConversations: (tenantId, projectId) =>
     request<Conversation[]>(`${scope(tenantId, projectId)}/conversations`),
   createConversation: (tenantId, projectId) =>
@@ -45,12 +51,14 @@ export const apiClient: ExpertApi = {
     ),
   async *sendMessage(input: SendMessageInput) {
     if (!BASE) throw new Error('API Adapter не настроен.');
+    const accessToken = await getAccessToken();
     const response = await fetch(
-      `${scope(input.tenantId, input.projectId)}/conversations/${encodeURIComponent(input.conversationId)}/messages`,
+      `${BASE}${scope(input.tenantId, input.projectId)}/conversations/${encodeURIComponent(input.conversationId)}/messages`,
       {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'omit',
         headers: {
+          Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           Accept: 'text/event-stream',
         },
@@ -79,8 +87,9 @@ export const apiClient: ExpertApi = {
         const events = buffer.split(/\\r?\\n\\r?\\n/);
         buffer = events.pop() ?? '';
         for (const eventText of events) {
-          const eventName = eventText.split(/\\r?\\n/).find((line) => line.startsWith('event:'))?.slice(6).trim();
-          const data = eventText.split(/\\r?\\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\\n');
+          const lines = eventText.split(/\\r?\\n/);
+          const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
+          const data = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\\n');
           if (!data) continue;
           if (eventName === 'error') {
             const parsed = JSON.parse(data) as { message?: string };
