@@ -49,3 +49,9 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Smoke test published Pages assets
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          curl --fail --silent --show-error --location --retry 10 --retry-delay 5 --retry-all-errors "${PAGE_URL}logo.svg" -o /tmp/pea-logo.svg
+          test -s /tmp/pea-logo.svg
