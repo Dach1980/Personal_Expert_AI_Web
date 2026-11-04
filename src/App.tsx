@@ -17,14 +17,31 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [projects, setProjects] = useState<Project[]>(demoMode ? demoProjects : []);
   const [selectedId, setSelectedId] = useState<string | null>(demoMode ? demoProjects[0]?.id ?? null : null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(demoMode ? demoMessages : []);
   const [loadState, setLoadState] = useState<LoadState>(demoMode ? 'ready' : 'loading');
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const selectedProject = useMemo(
     () => projects.find((item) => item.id === selectedId) ?? null,
     [projects, selectedId],
   );
+
+  const loadProjectChat = async (tenantId: string, project: Project) => {
+    setConversationId(null);
+    setMessages([]);
+    setChatError(null);
+    const conversations = await apiClient.getConversations(tenantId, project.id);
+    const conversation = conversations[0] ?? await apiClient.createConversation(tenantId, project.id);
+    setConversationId(conversation.id);
+    const history = await apiClient.getMessages(tenantId, project.id, conversation.id);
+    setMessages(history.map((message) => ({
+      ...message,
+      createdAt: message.created_at ?? new Date().toISOString(),
+    })));
+  };
 
   const loadWorkspace = async () => {
     setLoadState('loading');
@@ -35,16 +52,21 @@ export default function App() {
       if (!currentSession.authenticated) {
         setProjects([]);
         setSelectedId(null);
+        setConversationId(null);
+        setMessages([]);
         setLoadState('ready');
         return;
       }
       const availableProjects = await apiClient.getProjects();
       setProjects(availableProjects);
-      setSelectedId((current) =>
-        current && availableProjects.some((item) => item.id === current)
-          ? current
-          : availableProjects[0]?.id ?? null,
-      );
+      const firstProject = availableProjects[0] ?? null;
+      setSelectedId(firstProject?.id ?? null);
+      if (firstProject && currentSession.tenantId) {
+        await loadProjectChat(currentSession.tenantId, firstProject);
+      } else {
+        setConversationId(null);
+        setMessages([]);
+      }
       setLoadState('ready');
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : 'Не удалось подключиться к API Adapter.';
@@ -52,6 +74,8 @@ export default function App() {
         setSession({ authenticated: false });
         setProjects([]);
         setSelectedId(null);
+        setConversationId(null);
+        setMessages([]);
         setLoadState('ready');
         return;
       }
@@ -78,6 +102,60 @@ export default function App() {
     ]);
   };
 
+  const selectProject = async (project: Project) => {
+    setSelectedId(project.id);
+    if (demoMode) return;
+    if (!session?.tenantId) {
+      setChatError('В сессии отсутствует tenant context.');
+      return;
+    }
+    setLoadState('loading');
+    try {
+      await loadProjectChat(session.tenantId, project);
+      setLoadState('ready');
+    } catch (cause) {
+      setChatError(cause instanceof Error ? cause.message : 'Не удалось открыть диалог.');
+      setLoadState('ready');
+    }
+  };
+
+  const sendRealMessage = async (content: string) => {
+    if (!session?.tenantId || !selectedProject || !conversationId || sending) return;
+    setSending(true);
+    setChatError(null);
+    const now = new Date().toISOString();
+    const assistantId = crypto.randomUUID();
+    setMessages((old) => [
+      ...old,
+      { id: crypto.randomUUID(), role: 'user', content, createdAt: now },
+      { id: assistantId, role: 'assistant', content: '', createdAt: now },
+    ]);
+    try {
+      for await (const delta of apiClient.sendMessage({
+        tenantId: session.tenantId,
+        projectId: selectedProject.id,
+        conversationId,
+        content,
+      })) {
+        setMessages((old) => old.map((message) =>
+          message.id === assistantId
+            ? { ...message, content: message.content + delta }
+            : message,
+        ));
+      }
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : 'Не удалось получить ответ локальной модели.';
+      setChatError(message);
+      setMessages((old) => old.map((item) =>
+        item.id === assistantId && !item.content
+          ? { ...item, content: 'Ответ не получен. Сообщение пользователя сохранено в истории.' }
+          : item,
+      ));
+    } finally {
+      setSending(false);
+    }
+  };
+
   const activeProject = selectedProject ?? (demoMode ? demoProjects[0] : null);
   const projectCount = projects.length;
   const identityLabel = demoMode ? 'DEMO' : session?.authenticated ? 'АКТИВНА' : 'НЕТ СЕССИИ';
@@ -101,8 +179,8 @@ export default function App() {
           <div className="stats-grid">
             {[
               [Activity, 'ПРОЕКТЫ', demoMode ? String(projectCount) : loadState === 'ready' ? String(projectCount) : '—', demoMode ? 'Демонстрационные записи' : 'Данные API Adapter'],
-              [FileText, 'ДОКУМЕНТЫ', '—', 'Документный API ещё не подключён'],
-              [MessageSquare, 'ДИАЛОГИ', '—', 'Conversation API ещё не подключён'],
+              [FileText, 'ДОКУМЕНТЫ', '—', 'Подключение document workspace — следующий этап'],
+              [MessageSquare, 'ДИАЛОГИ', conversationId ? '1' : '—', 'История диалогов PEA'],
               [ShieldCheck, 'ДОСТУП', identityLabel, demoMode ? 'Права не проверяются' : 'Сессия проверяется backend'],
             ].map(([Icon, label, value, note], index) => {
               const ItemIcon = Icon as typeof Activity;
@@ -129,14 +207,14 @@ export default function App() {
           {!demoMode && loadState === 'loading' && (
             <section className="panel connection-panel" aria-live="polite">
               <h2>Подключение к Personal Expert AI</h2>
-              <p>Проверяем сессию и загружаем доступные проекты через API Adapter.</p>
+              <p>Проверяем сессию, загружаем проекты и историю диалогов.</p>
             </section>
           )}
 
           {!demoMode && loadState === 'ready' && !session?.authenticated && (
             <section className="panel connection-panel">
               <h2>Требуется вход</h2>
-              <p>API Adapter не подтвердил активную пользовательскую сессию. Вход через Keycloak будет включён после развёртывания доверенного OIDC gateway.</p>
+              <p>Keycloak login будет доступен после развёртывания доверенного OIDC gateway. API не принимает анонимные запросы.</p>
             </section>
           )}
 
@@ -145,18 +223,22 @@ export default function App() {
               <ProjectList
                 projects={projects}
                 selectedId={selectedId ?? ''}
-                onSelect={(item) => setSelectedId(item.id)}
+                onSelect={(project) => void selectProject(project)}
               />
               {demoMode && activeProject ? (
                 <ChatPanel project={activeProject} messages={messages} onSend={sendDemoMessage} />
+              ) : selectedProject ? (
+                <ChatPanel
+                  project={selectedProject}
+                  messages={messages}
+                  onSend={(content) => void sendRealMessage(content)}
+                  sending={sending}
+                  error={chatError}
+                />
               ) : (
                 <section className="panel connection-panel">
-                  <h2>{selectedProject?.name ?? 'Нет доступных проектов'}</h2>
-                  <p>
-                    {selectedProject
-                      ? 'Проекты загружаются из API Adapter. История диалогов и отправка сообщений появятся после реализации и проверки conversation endpoints.'
-                      : 'У пользователя пока нет доступных проектов. После подключения project API здесь появится список из PEA.'}
-                  </p>
+                  <h2>Нет доступных проектов</h2>
+                  <p>Пользователю пока не назначены проекты в PEA.</p>
                 </section>
               )}
             </div>
