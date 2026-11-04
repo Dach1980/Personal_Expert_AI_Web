@@ -1,20 +1,35 @@
 # Personal Expert AI Web
 
-Отдельный frontend-клиент Personal Expert AI. Приложение построено на React + TypeScript + Vite и публикуется как статический сайт через GitHub Pages.
+Отдельный публичный frontend-клиент Personal Expert AI. Приложение построено на React + TypeScript + Vite и публикуется как статический сайт через GitHub Pages.
 
-## Текущий этап
+Текущая версия: **0.4.0**. Основная ветка разработки: `main`.
 
-- [x] React + TypeScript + Vite.
-- [x] Компонентная структура: Sidebar, ProjectList, ChatPanel.
-- [x] Адаптивное рабочее пространство и поиск проектов.
-- [x] Типизированные модели проекта, сессии и сообщений.
-- [x] Изолированный API client для будущего API Adapter.
-- [x] GitHub Actions: установка зависимостей, production build, публикация dist.
-- [ ] Реальная серверная авторизация и управление сессией.
-- [ ] Подключение API Adapter к проверенному Bionic.
-- [ ] Реальная история диалогов и потоковая генерация.
-- [ ] Загрузка документов, RAG и проверяемые ссылки на страницы источников.
-- [ ] Проверка проектных и пользовательских ACL на backend.
+## Текущий статус
+
+### Реализовано в коде
+
+- [x] React + TypeScript + Vite; Sidebar, ProjectList, ChatPanel и DocumentWorkspace.
+- [x] Адаптивное рабочее пространство и переключение разделов.
+- [x] Типизированные модели пользователя, сессии, проектов, диалогов и документов.
+- [x] OIDC Authorization Code + PKCE S256 через public Keycloak client `pea-web`.
+- [x] API client для Bionic PEA Adapter: session, projects, conversations и message history.
+- [x] SSE streaming client для ответов PEA conversation API.
+- [x] Document workspace: список/создание документов, загрузка immutable versions, enqueue processing, статусы, SourceFragments и artifacts.
+- [x] Просмотр artifact content и отображение Reviews / Findings / Evidence.
+- [x] Bearer access token передаётся только в Authorization header; fetch credentials выключены.
+- [x] Явный demo mode через `VITE_DEMO_MODE=true`.
+
+### Требует live-проверки
+
+- [ ] Применить `pea-web` client и `pea-api-context` scope к реальному Stack-managed Keycloak realm.
+- [ ] Проверить browser login/logout, PKCE redirect, state/nonce, refresh и token expiry.
+- [ ] Проверить реальный HTTPS Bionic Adapter, точный CORS allowlist и приватную связность Bionic → PEA.
+- [ ] Проверить session/projects/conversations/SSE на развернутом PEA и локальной LM Studio модели.
+- [ ] Проверить upload → version → processing run → SourceFragment/artifact preview на реальных данных.
+- [ ] Провести E2E security tests: IDOR, cross-tenant/project, token leakage, XSS и CORS.
+- [ ] Проверить опубликованный Pages deployment и прямую перезагрузку SPA routes.
+
+Наличие frontend-кода и mock/unit tests не означает, что интеграция с живым Keycloak/Bionic/PEA уже принята. До успешного E2E приложение не считается сквозным рабочим прототипом.
 
 ## Локальный запуск
 
@@ -23,42 +38,48 @@
 ```bash
 npm install
 npm run dev
-```
-
-Production build:
-
-```bash
 npm run build
 npm run preview
 ```
 
-Для подключения backend скопировать `.env.example` в `.env.local` и задать `VITE_API_BASE_URL`. В frontend нельзя помещать API keys, Bionic tokens, пароли или иные секреты.
+Для реальной интеграции задаются публичные frontend configuration values:
+
+- `VITE_API_BASE_URL` — HTTPS origin Bionic PEA Adapter;
+- `VITE_OIDC_ISSUER` — точный issuer общего Keycloak realm;
+- `VITE_OIDC_CLIENT_ID=pea-web`;
+- `VITE_OIDC_REDIRECT_URI` — точный callback, зарегистрированный в Keycloak.
+
+Это публичные параметры, не секреты. Не помещать во frontend API keys, client secrets, PEA credentials, DB credentials или model-provider keys.
 
 ## Архитектура
 
 ```text
 React + TypeScript (GitHub Pages)
               |
+              | HTTPS + OIDC access token (PKCE)
               v
-       API Adapter / Gateway
+Bionic PEA Adapter / trusted deployment boundary
+              |
+              | private server-to-server request
+              v
+Personal Expert AI API
               |
               v
-            Bionic
-              |
-              v
-          LM Studio
+PostgreSQL + local document storage + LM Studio
 ```
 
-UI зависит от нашего нормализованного API Adapter contract, а не от внутренних endpoint-ов Bionic. Контракт — проектное предложение, его совместимость с Bionic ещё предстоит подтвердить.
+PEA остаётся владельцем доменных данных, tenant/project authorization, документов, версий, processing runs и SourceFragments. Bionic Adapter — сменная серверная граница интеграции. Frontend не обращается напрямую к PEA private API, PostgreSQL, storage или LM Studio.
 
-## Важные ограничения текущей версии
+## Ограничения
 
-Текущий UI использует демонстрационные проекты и локальные сообщения. Вызовы API client подготовлены, но интерфейс пока не переключён на реальную серверную сессию. Авторизация, безопасность, изоляция данных, RAG и streaming не считаются реализованными до интеграционных тестов с backend.
-
-GitHub Pages размещает только статические файлы. Проверку пользователя и разрешений необходимо выполнять на backend для каждого запроса. LM Studio не следует открывать напрямую в публичный интернет.
+- GitHub Pages размещает только статические файлы; backend, Keycloak, PostgreSQL, worker, storage и LM Studio работают отдельно.
+- PEA chat API использует локальный model provider без cloud fallback. Реальный inference требует доступной LM Studio и заданного `PEA_LLM_MODEL`.
+- Наличие document workspace не означает, что Agent Runtime уже выполняет retrieval по PEA SourceFragments. Для grounded chat нужен отдельный tenant/project-scoped retrieval tool и regression tests.
+- Проверка пользователя и разрешений выполняется backend на каждом запросе. Не доверять tenant/project identifiers из браузера без серверной авторизации.
 
 ## Документация
 
-- [API Adapter contract](docs/API_ADAPTER.md)
+- [API Adapter contract and current integration status](docs/API_ADAPTER.md)
 - [Bionic GPT capability audit](docs/BIONIC_CAPABILITY_AUDIT.md)
 - [Deployment](docs/DEPLOYMENT.md)
+- [PEA repository reconciliation — 2026-11-04](https://github.com/Dach1980/Personal_Expert_AI/blob/main/docs/development/REPOSITORY_RECONCILIATION_2026-11-04.md)
