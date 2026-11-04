@@ -4,7 +4,7 @@
 
 ## Принципы
 
-- UI не обращается напрямую к Bionic или LM Studio.
+- UI обращается только к публичному Bionic PEA Adapter по HTTPS и не обращается напрямую к PEA private API, PostgreSQL, storage или LM Studio.
 - Adapter нормализует пользователей, проекты, диалоги, сообщения, документы, citations, streaming и ошибки.
 - Credentials и внутренние адреса не передаются браузеру.
 - Bionic можно заменить другим backend без переписывания UI.
@@ -99,7 +99,7 @@ Gateway возвращает нормализованные коды: UNAUTHENTI
 
 PEA хранит диалоги/сообщения в tenant- и project-scoped таблицах с RLS и composite FK. Чат обращается к LM Studio через provider abstraction и не имеет cloud fallback. Если `PEA_LLM_MODEL` не задан, endpoint закрывается с HTTP 503.
 
-Bionic Adapter уже имел GET-маршруты для документов, версий, source fragments, artifacts, knowledge, reviews, findings и evidence. Они остаются серверными read endpoints; frontend document browser, upload UI и полноценный просмотр evidence ещё не завершены.
+Bionic Adapter реализует document endpoints для list/create, immutable version upload, processing runs, SourceFragments, artifacts и Reviews/Findings/Evidence. Web 0.4.0 содержит `DocumentWorkspace` и API client для загрузки файла, создания версии, запуска обработки, чтения фрагментов/артефактов и просмотра artifact content/evidence. Это подтверждено исходниками и успешным frontend build, но не live E2E: фактический upload/processing/preview в развернутом Stack ещё не принят.
 
 ### Переменные окружения frontend
 
@@ -114,4 +114,4 @@ GitHub Actions подтверждает frontend build и backend unit/integrati
 
 ## Статус
 
-React API client подключён к UI runtime для Keycloak PKCE session, projects, conversations и streaming chat. Документные Bionic read routes существуют, но загрузка/просмотр документов в Pages UI и live E2E остаются открытыми.
+React API client подключён к UI runtime для Keycloak PKCE session, projects, conversations и streaming chat. DocumentWorkspace подключён в раздел «База знаний» и содержит upload/version/processing/SourceFragment/artifact/evidence flows. Frontend build и Pages deployment прошли успешно на commit `e54e4680625addd50601516964566cf83c0fdd72`. Применение Keycloak realm config, live browser login, real Bionic↔PEA network, upload/processing и LM Studio inference требуют отдельного runtime E2E.
