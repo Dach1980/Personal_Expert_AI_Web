@@ -76,6 +76,17 @@ data: {"messageId":"..."}
 
 Gateway возвращает нормализованные коды: UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, VALIDATION_ERROR, UPSTREAM_ERROR. Текст ошибки не должен раскрывать внутренние секреты и инфраструктурные адреса.
 
+## Фактический статус на 2026-11-04
+
+PEA backend уже предоставляет два маршрута, которые использует начальный browser client:
+
+- `GET /api/v1/session` — требует валидный Bearer access token, независимо проверяет principal, active user, tenant и membership; возвращает `authenticated`, `userId`, `displayName`, `tenantId`.
+- `GET /api/v1/projects` — требует тот же проверенный principal и возвращает только проекты, доступные пользователю по tenant/project membership. В ответе присутствуют `id`, `tenant_id`, `name`, `code`, `description`, `status`.
+
+Browser client использует cookie-based gateway session (`credentials: include`). Поэтому эти маршруты должны быть доступны только через доверенный HTTPS gateway, который валидирует OIDC-сессию, удаляет любые клиентские Authorization/forwarded-token headers и сам формирует Authorization: Bearer для PEA. Не открывать PEA напрямую браузеру с обходом gateway.
+
+Остальные маршруты таблицы выше, включая login/logout, conversations, streaming и document upload, остаются проектным контрактом Adapter до реализации и тестирования. В частности, UI не должен имитировать успешный ответ модели, пока conversation API не подключён. Демонстрационный режим включается только явно через `VITE_DEMO_MODE=true`; по умолчанию сайт работает без demo data.
+
 ## Статус
 
 React API client добавлен как отдельный сервисный слой. Пока он не подключён к UI runtime и не проверен на реальном backend. Все перечисленные endpoint-ы — draft до подтверждения реализации Adapter и Bionic.
