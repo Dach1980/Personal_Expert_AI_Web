@@ -47,6 +47,7 @@ export default function App() {
     setLoadState('loading');
     setError(null);
     try {
+      await apiClient.initializeAuth();
       const currentSession = await apiClient.getSession();
       setSession(currentSession);
       if (!currentSession.authenticated) {
@@ -166,7 +167,11 @@ export default function App() {
       <main className="main-area">
         <header className="topbar">
           <span>Рабочее пространство　/　<b>{activeProject?.name ?? 'Проекты'}</b></span>
-          <span className="environment">{demoMode ? '● DEMO MODE' : loadState === 'ready' ? '● API CLIENT' : '● CONNECTING'}</span>
+          <div className="topbar-actions">
+            {session?.authenticated && <span className="user-identity">{session.displayName ?? 'Пользователь'}</span>}
+            {!demoMode && session?.authenticated && <button className="text-button" onClick={() => apiClient.logout()}>Выйти</button>}
+            <span className="environment">{demoMode ? '● DEMO MODE' : loadState === 'ready' ? '● API CLIENT' : '● CONNECTING'}</span>
+          </div>
         </header>
         <div className="page-content">
           <div className="page-heading">
@@ -214,7 +219,9 @@ export default function App() {
           {!demoMode && loadState === 'ready' && !session?.authenticated && (
             <section className="panel connection-panel">
               <h2>Требуется вход</h2>
-              <p>Keycloak login будет доступен после развёртывания доверенного OIDC gateway. API не принимает анонимные запросы.</p>
+              <p>Вход выполняется через Keycloak Authorization Code + PKCE. API принимает только подписанный access token с нужной аудиторией и проверяет членство в PEA.</p>
+              <button className="secondary-button login-button" onClick={() => void apiClient.login().catch((cause) => setError(cause instanceof Error ? cause.message : 'Не удалось начать вход.'))}>Войти через Keycloak</button>
+              {error && <p role="alert">{error}</p>}
             </section>
           )}
 
