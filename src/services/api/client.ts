@@ -2,7 +2,7 @@ import type { ChatMessage, Conversation, Project, Session } from '../../types';
 import type { ExpertApi, SendMessageInput } from './types';
 import { beginLogin, endLoginSession, getAccessToken, initializeOidc } from './oidc';
 
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\\/+$/, '');
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!BASE) throw new Error('API Adapter не настроен.');
