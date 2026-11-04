@@ -84,12 +84,12 @@ export const apiClient: ExpertApi = {
         const { value, done } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split(/\\r?\\n\\r?\\n/);
+        const events = buffer.split(/\r?\n\r?\n/);
         buffer = events.pop() ?? '';
         for (const eventText of events) {
-          const lines = eventText.split(/\\r?\\n/);
+          const lines = eventText.split(/\r?\n/);
           const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
-          const data = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\\n');
+          const data = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
           if (!data) continue;
           if (eventName === 'error') {
             const parsed = JSON.parse(data) as { message?: string };
