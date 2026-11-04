@@ -28,6 +28,7 @@
 - [ ] Проверить upload → version → processing run → SourceFragment/artifact preview на реальных данных.
 - [ ] Провести E2E security tests: IDOR, cross-tenant/project, token leakage, XSS и CORS.
 - [ ] Проверить опубликованный Pages deployment и прямую перезагрузку SPA routes.
+- [ ] Подтвердить наличие logo.svg в опубликованном Pages artifact после исправления publicDir.
 
 Наличие frontend-кода и mock/unit tests не означает, что интеграция с живым Keycloak/Bionic/PEA уже принята. До успешного E2E приложение не считается сквозным рабочим прототипом.
 
@@ -80,6 +81,7 @@ PEA остаётся владельцем доменных данных, tenant/
 ## Документация
 
 - [API Adapter contract and current integration status](docs/API_ADAPTER.md)
+- [Подробный roadmap до полноценного рабочего продукта](docs/PROJECT_ROADMAP.md)
 - [Bionic GPT capability audit](docs/BIONIC_CAPABILITY_AUDIT.md)
 - [Deployment](docs/DEPLOYMENT.md)
 - [PEA repository reconciliation — 2026-11-04](https://github.com/Dach1980/Personal_Expert_AI/blob/main/docs/development/REPOSITORY_RECONCILIATION_2026-11-04.md)
