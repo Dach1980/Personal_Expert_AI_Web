@@ -8,7 +8,10 @@ export interface SendMessageInput {
   signal?: AbortSignal;
 }
 
-export interface ExpertApi {\n  initializeAuth(): Promise<void>;\n  login(): Promise<void>;\n  logout(): void;
+export interface ExpertApi {
+  initializeAuth(): Promise<void>;
+  login(): Promise<void>;
+  logout(): void;
   getSession(): Promise<Session>;
   getProjects(): Promise<Project[]>;
   getConversations(tenantId: string, projectId: string): Promise<Conversation[]>;
