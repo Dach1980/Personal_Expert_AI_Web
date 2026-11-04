@@ -28,6 +28,10 @@ jobs:
         run: npm install
       - name: Build
         run: npm run build
+      - name: Verify published branding assets
+        run: |
+          test -s dist/logo.svg
+          grep -q 'logo.svg' dist/index.html
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload build artifact
