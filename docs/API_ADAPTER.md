@@ -78,15 +78,40 @@ Gateway возвращает нормализованные коды: UNAUTHENTI
 
 ## Фактический статус на 2026-11-04
 
-PEA backend уже предоставляет два маршрута, которые использует начальный browser client:
+### Авторизация
 
-- `GET /api/v1/session` — требует валидный Bearer access token, независимо проверяет principal, active user, tenant и membership; возвращает `authenticated`, `userId`, `displayName`, `tenantId`.
-- `GET /api/v1/projects` — требует тот же проверенный principal и возвращает только проекты, доступные пользователю по tenant/project membership. В ответе присутствуют `id`, `tenant_id`, `name`, `code`, `description`, `status`.
+- Публичный SPA использует Keycloak public client `pea-web`, Authorization Code + PKCE S256.
+- Access/refresh tokens находятся только в памяти JavaScript; PKCE verifier/state/nonce хранятся в sessionStorage только на время redirect round-trip.
+- SPA передаёт Bearer access token на Bionic PEA Adapter. Bionic проверяет RS256/JWKS, issuer, audience и временные claims, затем проксирует тот же токен в PEA. PEA выполняет независимую проверку и membership authorization.
+- Bionic CORS разрешает только точный origin из `PEA_WEB_ORIGIN`; wildcard и cookie credentials не используются.
+- Keycloak client/scope provisioning реализован в PEA bootstrap script, но применение к реальному Stack realm и проверка redirect/login требуют запуска с admin credentials.
 
-Browser client использует cookie-based gateway session (`credentials: include`). Поэтому эти маршруты должны быть доступны только через доверенный HTTPS gateway, который валидирует OIDC-сессию, удаляет любые клиентские Authorization/forwarded-token headers и сам формирует Authorization: Bearer для PEA. Не открывать PEA напрямую браузеру с обходом gateway.
+### Реализованные API
 
-Остальные маршруты таблицы выше, включая login/logout, conversations, streaming и document upload, остаются проектным контрактом Adapter до реализации и тестирования. В частности, UI не должен имитировать успешный ответ модели, пока conversation API не подключён. Демонстрационный режим включается только явно через `VITE_DEMO_MODE=true`; по умолчанию сайт работает без demo data.
+| Browser path (Bionic) | PEA upstream | Назначение |
+|---|---|---|
+| `GET /api/pea/session` | `GET /api/v1/session` | Проверенная сессия и tenant |
+| `GET /api/pea/projects` | `GET /api/v1/projects` | Проекты текущего пользователя |
+| `GET /api/pea/tenants/{tenant}/projects/{project}/conversations` | Тот же путь под `/api/v1` | История диалогов |
+| `POST /api/pea/tenants/{tenant}/projects/{project}/conversations` | Тот же путь под `/api/v1` | Создать диалог |
+| `GET .../conversations/{conversation}/messages` | Тот же путь под `/api/v1` | История сообщений |
+| `POST .../conversations/{conversation}/messages` | Тот же путь под `/api/v1` | SSE-ответ локальной модели |
+
+PEA хранит диалоги/сообщения в tenant- и project-scoped таблицах с RLS и composite FK. Чат обращается к LM Studio через provider abstraction и не имеет cloud fallback. Если `PEA_LLM_MODEL` не задан, endpoint закрывается с HTTP 503.
+
+Bionic Adapter уже имел GET-маршруты для документов, версий, source fragments, artifacts, knowledge, reviews, findings и evidence. Они остаются серверными read endpoints; frontend document browser, upload UI и полноценный просмотр evidence ещё не завершены.
+
+### Переменные окружения frontend
+
+- `VITE_API_BASE_URL`: публичный HTTPS origin Bionic server/API gateway (без завершающего path).
+- `VITE_OIDC_ISSUER`: точный issuer общего Keycloak realm.
+- `VITE_OIDC_CLIENT_ID=pea-web`.
+- `VITE_OIDC_REDIRECT_URI`: точный callback URL, разрешённый в Keycloak; по умолчанию origin + Pages base path.
+
+### Границы проверки
+
+GitHub Actions подтверждает frontend build и backend unit/integration/build checks после каждого соответствующего commit. Это не доказывает, что Stack realm уже обновлён, Bionic/PEA доступны друг другу в реальной сети, LM Studio отвечает на целевой модели или браузерный вход завершает полный E2E flow. Эти проверки требуют реального развернутого окружения.
 
 ## Статус
 
-React API client добавлен как отдельный сервисный слой. Пока он не подключён к UI runtime и не проверен на реальном backend. Все перечисленные endpoint-ы — draft до подтверждения реализации Adapter и Bionic.
+React API client подключён к UI runtime для Keycloak PKCE session, projects, conversations и streaming chat. Документные Bionic read routes существуют, но загрузка/просмотр документов в Pages UI и live E2E остаются открытыми.
