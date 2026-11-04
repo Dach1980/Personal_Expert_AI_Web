@@ -8,7 +8,7 @@ import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
 import type { ChatMessage, Project, Session } from './types';
 
-const logoUrl = `${import.meta.env.BASE_URL}assets/logo.svg`;
+const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
 type LoadState = 'loading' | 'ready' | 'error';
