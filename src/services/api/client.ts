@@ -1,1 +1,99 @@
-import type{ChatMessage,Project,Session}from'../../types';import type{ExpertApi,SendMessageInput}from'./types';const BASE=import.meta.env.VITE_API_BASE_URL?.replace(/\/$/,'');async function request<T>(path:string,init?:RequestInit):Promise<T>{if(!BASE)throw new Error('API Adapter не настроен.');const r=await fetch(BASE+path,{...init,credentials:'include',headers:{'Content-Type':'application/json',...init?.headers}});if(!r.ok)throw new Error(r.status===401?'Требуется авторизация.':r.status===403?'Недостаточно прав.':`Ошибка API: HTTP ${r.status}`);return r.json() as Promise<T>}export const apiClient:ExpertApi={getSession:()=>request<Session>('/api/v1/session'),getProjects:()=>request<Project[]>('/api/v1/projects'),getMessages:(p,c)=>request<ChatMessage[]>(`/api/v1/projects/${encodeURIComponent(p)}/conversations/${encodeURIComponent(c)}/messages`),async *sendMessage(input:SendMessageInput){if(!BASE)throw new Error('API Adapter не настроен.');const r=await fetch(`${BASE}/api/v1/conversations/${encodeURIComponent(input.conversationId)}/messages`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',Accept:'text/event-stream'},body:JSON.stringify({projectId:input.projectId,content:input.content}),signal:input.signal});if(!r.ok||!r.body)throw new Error(`Ошибка streaming: HTTP ${r.status}`);const reader=r.body.getReader(),decoder=new TextDecoder();let buffer='';while(true){const{value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const events=buffer.split('\n\n');buffer=events.pop()??'';for(const event of events){const data=event.split('\n').find(x=>x.startsWith('data:'))?.slice(5).trim();if(data){try{const parsed=JSON.parse(data) as{delta?:string};if(parsed.delta)yield parsed.delta}catch{/* invalid SSE event */}}}}}};
+import type { ChatMessage, Conversation, Project, Session } from '../../types';
+import type { ExpertApi, SendMessageInput } from './types';
+
+const BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\\/$/, '');
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!BASE) throw new Error('API Adapter не настроен.');
+  const response = await fetch(BASE + path, {
+    ...init,
+    credentials: 'include',
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      Accept: 'application/json',
+      ...init?.headers,
+    },
+  });
+  if (!response.ok) {
+    throw new Error(
+      response.status === 401
+        ? 'Требуется авторизация.'
+        : response.status === 403
+          ? 'Недостаточно прав.'
+          : `Ошибка API: HTTP ${response.status}`,
+    );
+  }
+  return response.json() as Promise<T>;
+}
+
+const scope = (tenantId: string, projectId: string) =>
+  `/api/v1/tenants/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}`;
+
+export const apiClient: ExpertApi = {
+  getSession: () => request<Session>('/api/v1/session'),
+  getProjects: () => request<Project[]>('/api/v1/projects'),
+  getConversations: (tenantId, projectId) =>
+    request<Conversation[]>(`${scope(tenantId, projectId)}/conversations`),
+  createConversation: (tenantId, projectId) =>
+    request<Conversation>(`${scope(tenantId, projectId)}/conversations`, {
+      method: 'POST',
+      body: JSON.stringify({ title: 'Новый диалог' }),
+    }),
+  getMessages: (tenantId, projectId, conversationId) =>
+    request<ChatMessage[]>(
+      `${scope(tenantId, projectId)}/conversations/${encodeURIComponent(conversationId)}/messages`,
+    ),
+  async *sendMessage(input: SendMessageInput) {
+    if (!BASE) throw new Error('API Adapter не настроен.');
+    const response = await fetch(
+      `${scope(input.tenantId, input.projectId)}/conversations/${encodeURIComponent(input.conversationId)}/messages`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({ content: input.content }),
+        signal: input.signal,
+      },
+    );
+    if (!response.ok || !response.body) {
+      throw new Error(
+        response.status === 401
+          ? 'Требуется авторизация.'
+          : response.status === 403
+            ? 'Недостаточно прав.'
+            : `Ошибка отправки сообщения: HTTP ${response.status}`,
+      );
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split(/\\r?\\n\\r?\\n/);
+        buffer = events.pop() ?? '';
+        for (const eventText of events) {
+          const eventName = eventText.split(/\\r?\\n/).find((line) => line.startsWith('event:'))?.slice(6).trim();
+          const data = eventText.split(/\\r?\\n/).filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\\n');
+          if (!data) continue;
+          if (eventName === 'error') {
+            const parsed = JSON.parse(data) as { message?: string };
+            throw new Error(parsed.message ?? 'Ошибка локальной модели.');
+          }
+          if (eventName === 'text_delta') {
+            const parsed = JSON.parse(data) as { delta?: string };
+            if (parsed.delta) yield parsed.delta;
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  },
+};
