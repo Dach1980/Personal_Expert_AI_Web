@@ -47,7 +47,15 @@ export default function App() {
       );
       setLoadState('ready');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Не удалось подключиться к API Adapter.');
+      const message = cause instanceof Error ? cause.message : 'Не удалось подключиться к API Adapter.';
+      if (message === 'Требуется авторизация.') {
+        setSession({ authenticated: false });
+        setProjects([]);
+        setSelectedId(null);
+        setLoadState('ready');
+        return;
+      }
+      setError(message);
       setLoadState('error');
     }
   };
