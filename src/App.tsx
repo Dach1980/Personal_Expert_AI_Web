@@ -3,6 +3,7 @@ import { Activity, FileText, MessageSquare, ShieldCheck } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ProjectList } from './components/ProjectList';
 import { ChatPanel } from './components/ChatPanel';
+import { DocumentWorkspace } from './components/DocumentWorkspace';
 import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
 import type { ChatMessage, Project, Session } from './types';
@@ -225,14 +226,23 @@ export default function App() {
             </section>
           )}
 
-          {(nav === 'workspace' || nav === 'projects') && (demoMode || (loadState === 'ready' && session?.authenticated)) && (
+          {(nav === 'workspace' || nav === 'projects' || nav === 'knowledge') && (demoMode || (loadState === 'ready' && session?.authenticated)) && (
             <div className="workspace-grid">
               <ProjectList
                 projects={projects}
                 selectedId={selectedId ?? ''}
                 onSelect={(project) => void selectProject(project)}
               />
-              {demoMode && activeProject ? (
+              {nav === 'knowledge' ? (
+                selectedProject && session?.tenantId && !demoMode ? (
+                  <DocumentWorkspace tenantId={session.tenantId} project={selectedProject} />
+                ) : (
+                  <section className="panel connection-panel">
+                    <h2>Документы проекта</h2>
+                    <p>Для просмотра документов выберите авторизованный проект. В демонстрационном режиме реальные документы недоступны.</p>
+                  </section>
+                )
+              ) : demoMode && activeProject ? (
                 <ChatPanel project={activeProject} messages={messages} onSend={sendDemoMessage} />
               ) : selectedProject ? (
                 <ChatPanel
@@ -251,16 +261,16 @@ export default function App() {
             </div>
           )}
 
-          {nav !== 'workspace' && nav !== 'projects' && (
+          {nav === 'settings' && (
             <section className="panel placeholder-panel">
-              <h2>{nav === 'knowledge' ? 'База знаний' : 'Настройки системы'}</h2>
-              <p>Раздел будет подключён к backend после реализации соответствующих API методов.</p>
+              <h2>Настройки системы</h2>
+              <p>Управление профилем, предпочтениями модели и локальной инфраструктурой будет подключено отдельно.</p>
             </section>
           )}
 
           <footer className="page-footer">
             <img src={logoUrl} alt="Cherkashin AI" />
-            <span>PERSONAL EXPERT AI · WEB CLIENT 0.3.0</span>
+            <span>PERSONAL EXPERT AI · WEB CLIENT 0.4.0</span>
             <span>{demoMode ? 'Явно включённый демонстрационный режим' : 'Независимый frontend · API Adapter architecture'}</span>
           </footer>
         </div>
