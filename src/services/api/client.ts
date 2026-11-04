@@ -1,4 +1,4 @@
-import type { ChatMessage, Conversation, Project, Session } from '../../types';
+import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
 import type { ExpertApi, SendMessageInput } from './types';
 import { beginLogin, endLoginSession, getAccessToken, initializeOidc } from './oidc';
 
@@ -32,6 +32,20 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 const scope = (tenantId: string, projectId: string) =>
   `/api/pea/tenants/${encodeURIComponent(tenantId)}/projects/${encodeURIComponent(projectId)}`;
 
+async function requestBlob(path: string): Promise<Blob> {
+  if (!BASE) throw new Error('API Adapter не настроен.');
+  const accessToken = await getAccessToken();
+  const response = await fetch(BASE + path, {
+    credentials: 'omit',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error(`Не удалось получить файл: HTTP ${response.status}`);
+  return response.blob();
+}
+
+const documentScope = (tenantId: string, projectId: string, documentId: string) =>
+  `${scope(tenantId, projectId)}/documents/${encodeURIComponent(documentId)}`;
+
 export const apiClient: ExpertApi = {
   initializeAuth: initializeOidc,
   login: beginLogin,
@@ -45,6 +59,68 @@ export const apiClient: ExpertApi = {
       method: 'POST',
       body: JSON.stringify({ title: 'Новый диалог' }),
     }),
+  getDocuments: (tenantId, projectId) =>
+    request<DocumentRecord[]>(`${scope(tenantId, projectId)}/documents`),
+  createDocument: (tenantId, projectId, title, documentType) =>
+    request<DocumentRecord>(`${scope(tenantId, projectId)}/documents`, {
+      method: 'POST',
+      body: JSON.stringify({ title, document_type: documentType ?? null }),
+    }),
+  async uploadDocumentVersion(tenantId, projectId, documentId, file, idempotencyKey) {
+    if (!BASE) throw new Error('API Adapter не настроен.');
+    const accessToken = await getAccessToken();
+    const form = new FormData();
+    form.append('file', file, file.name);
+    const response = await fetch(`${documentScope(tenantId, projectId, documentId)}/versions`, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Idempotency-Key': idempotencyKey,
+      },
+      body: form,
+    });
+    if (!response.ok) throw new Error(`Загрузка документа завершилась ошибкой HTTP ${response.status}`);
+    return response.json() as Promise<DocumentVersion>;
+  },
+  getVersions: (tenantId, projectId, documentId) =>
+    request<DocumentVersion[]>(`${documentScope(tenantId, projectId, documentId)}/versions`),
+  getFragments: (tenantId, projectId, documentId, versionId) =>
+    request<SourceFragment[]>(
+      `${documentScope(tenantId, projectId, documentId)}/versions/${encodeURIComponent(versionId)}/source-fragments`,
+    ),
+  getArtifacts: (tenantId, projectId, documentId, versionId) =>
+    request<ProcessingArtifact[]>(
+      `${documentScope(tenantId, projectId, documentId)}/versions/${encodeURIComponent(versionId)}/artifacts`,
+    ),
+  getProcessingRuns: (tenantId, projectId, documentId, versionId) =>
+    request<ProcessingRun[]>(
+      `${documentScope(tenantId, projectId, documentId)}/versions/${encodeURIComponent(versionId)}/processing-runs`,
+    ),
+  async enqueueProcessing(tenantId, projectId, documentId, versionId, idempotencyKey) {
+    return request<ProcessingRun>(
+      `${documentScope(tenantId, projectId, documentId)}/versions/${encodeURIComponent(versionId)}/processing-runs`,
+      {
+        method: 'POST',
+        headers: { 'Idempotency-Key': idempotencyKey },
+        body: JSON.stringify({ pipeline_name: 'document-ingestion', pipeline_version: '1', parser_manifest: {} }),
+      },
+    );
+  },
+  getReviews: (tenantId, projectId) =>
+    request<Review[]>(`${scope(tenantId, projectId)}/reviews`),
+  getFindings: (tenantId, projectId, reviewId) =>
+    request<Finding[]>(
+      `${scope(tenantId, projectId)}/reviews/${encodeURIComponent(reviewId)}/findings`,
+    ),
+  getEvidence: (tenantId, projectId, findingId) =>
+    request<Evidence[]>(
+      `${scope(tenantId, projectId)}/findings/${encodeURIComponent(findingId)}/evidence`,
+    ),
+  getArtifactContent: (tenantId, projectId, documentId, versionId, artifactId) =>
+    requestBlob(
+      `${documentScope(tenantId, projectId, documentId)}/versions/${encodeURIComponent(versionId)}/artifacts/${encodeURIComponent(artifactId)}/content`,
+    ),
   getMessages: (tenantId, projectId, conversationId) =>
     request<ChatMessage[]>(
       `${scope(tenantId, projectId)}/conversations/${encodeURIComponent(conversationId)}/messages`,
