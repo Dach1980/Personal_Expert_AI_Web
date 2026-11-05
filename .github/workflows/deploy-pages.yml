@@ -85,8 +85,8 @@ jobs:
           const pageUrl = process.env.PAGE_URL;
           const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
             .map((match) => match[1])
-            .filter((ref) => /^\/Personal_Expert_AI_Web\/.*\\.(?:js|css)(?:\\?|$)/.test(ref));
-          if (!refs.some((ref) => /\\.js(?:\\?|$)/.test(ref))) {
+            .filter((ref) => /^\/Personal_Expert_AI_Web\/.*\.(?:js|css)(?:\?|$)/.test(ref));
+          if (!refs.some((ref) => /\.js(?:\?|$)/.test(ref))) {
             throw new Error('No deployed JavaScript bundle found in index.html');
           }
           for (const ref of refs) {
