@@ -30,7 +30,7 @@
 - [ ] Применить `pea-web` client и `pea-api-context` scope к реальному Stack-managed Keycloak realm.
 - [ ] Проверить browser login/logout, PKCE redirect, silent SSO, refresh rotation и token expiry на реальном Keycloak.
 - [ ] Проверить реальный HTTPS Bionic Adapter, точный CORS allowlist и приватную связность Bionic → PEA.
-- [ ] Реализовать полноценный tenant switching и проверить server-side membership.
+- [x] Реализован Web tenant selector: список берётся из PEA membership API, выбор tenant используется для scoped API requests; CI/browser E2E и live membership acceptance ожидают проверки.
 - [ ] Завершить SSE citations/completion/error contract и проверку на реальном API.
 - [ ] Проверить upload → version → processing run → SourceFragment/artifact preview на реальных данных.
 - [ ] Провести E2E security tests: IDOR, cross-tenant/project, token leakage, XSS и CORS.
