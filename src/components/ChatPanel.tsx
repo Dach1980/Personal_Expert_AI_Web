@@ -40,7 +40,33 @@ export function ChatPanel({
             {message.role === 'assistant' && (
               <span className="message-avatar"><Sparkles size={14} /></span>
             )}
-            <div className="message-bubble">{message.content || (sending ? '…' : '')}</div>
+            <div className="message-bubble">
+              {message.content || (sending ? '…' : '')}
+              {!!message.citations?.length && (
+                <div className="message-citations" aria-label="Источники ответа">
+                  <b>Источники</b>
+                  {message.citations.map((citation, index) => {
+                    const label = citation.title ?? citation.document_title ?? 'Документ';
+                    const locator = [
+                      citation.page !== undefined ? `стр. ${citation.page}` : null,
+                      citation.sheet ? `лист ${citation.sheet}` : null,
+                    ].filter(Boolean).join(', ');
+                    const safeUrl = citation.url && /^https?:\/\//i.test(citation.url) ? citation.url : null;
+                    return (
+                      <div className="message-citation" key={citation.id ?? citation.source_fragment_id ?? index}>
+                        {safeUrl ? (
+                          <a href={safeUrl} target="_blank" rel="noopener noreferrer">{label}</a>
+                        ) : (
+                          <span>{label}</span>
+                        )}
+                        {locator && <small>{locator}</small>}
+                        {citation.excerpt && <small>{citation.excerpt}</small>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         ))}
         {!messages.length && (
