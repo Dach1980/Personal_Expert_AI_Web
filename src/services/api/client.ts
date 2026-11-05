@@ -52,7 +52,11 @@ export const apiClient: ExpertApi = {
   login: beginLogin,
   logout: endLoginSession,
   getSession: () => request<Session>('/api/pea/session'),
-  getProjects: () => request<Project[]>('/api/pea/projects'),
+  getTenants: () => request<import('../../types').TenantMembership[]>('/api/pea/tenants'),
+  getProjects: (tenantId) => request<Project[]>(`/api/pea/tenants/${encodeURIComponent(tenantId)}/projects`),
+  getAdminMe: () => request<import('../../types').SystemAdminMe>('/api/pea/admin/me'),
+  getAdminAuditEvents: () => request<import('../../types').SystemAuditEvent[]>('/api/pea/admin/audit-events'),
+  getAdminTenants: () => request<import('../../types').TenantRecord[]>('/api/pea/admin/tenants'),
   getConversations: (tenantId, projectId) =>
     request<Conversation[]>(`${scope(tenantId, projectId)}/conversations`),
   createConversation: (tenantId, projectId) =>
