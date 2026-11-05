@@ -311,12 +311,42 @@ PostgreSQL       Document storage      Local model provider
 **Главный критерий готовности Personal Expert AI:** пользователь входит через Keycloak, выбирает разрешённый tenant и проект, загружает документы, получает проверяемые результаты обработки, задаёт вопросы в чате и получает ответы с точными доказательствами из доступных ему версий документов.
 
 
-## Дополнение по аудиту deployment от 2026-11-05
+## Актуализация статуса — 2026-11-05
 
-Последняя read-only проверка Manus выполнена на commit `6b8ef05992fe09bcd98596454b11ed5197d06b79`. Результат зафиксирован отдельно: [Deployment audit 2026-11-05](DEPLOYMENT_AUDIT_2026-11-05.md).
+Удалённый `main` перед этим change set: `0caf1a6a568c6ad96a9a5b7f5a74b80e9b98a75c`.
 
-**Текущий статус этапа 0: BLOCKED.** На проверенном commit `npm test` прошёл (5/5), но `npm run build` завершился ошибкой TypeScript в `src/services/api/oidc.ts:90` (`JsonWebKey.kid`). GitHub Pages отдаёт некорректный опубликованный контент: необработанный `%BASE_URL%`, а `/logo.svg` возвращает 404. Последний известный push workflow — failed run [41956088626](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41956088626).
+### P0 — frontend baseline и GitHub Pages
 
-**Ближайший приоритет:** исправить тип JWK; проверить lockfile и `npm ci`; проверить, что workflow собирает и публикует именно `dist/`; проверить Pages base path и post-deploy smoke tests. До успешного Actions run и проверки опубликованного URL этап 0 не закрывать.
+- [x] JWK TypeScript metadata исправлены без ослабления RS256/JWKS проверки.
+- [x] `package-lock.json` зафиксирован; CI использует `npm ci`.
+- [x] GitHub Pages build/deploy workflow проходит на baseline.
+- [x] Post-deploy smoke test проверяет homepage, logo и JS/CSS.
+- [ ] SPA fallback и прямые URL `/projects`, `/knowledge`, `/settings` должны быть опубликованы и проверены. Локальный Manus commit `b522b761dace46a3a81e183457b98a60cad990bf` не был отправлен из-за HTTP 403.
+- [ ] Подтвердить browser refresh на всех SPA routes после deployment.
+- [ ] Проверить сайт в реальном браузере после успешного Actions run.
 
-GitHub repository Variables фактически не проверены из-за HTTP 403 на read-only доступ; их значения не раскрывались. Live Keycloak, Bionic Adapter и PEA API не подключены/не подтверждены. Runtime acceptance остаётся отдельным блокером.
+Baseline runs: [41957689405](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41957689405), [41957819479](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41957819479), [41957819515](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41957819515). Локальные тесты Manus для `b522b76` не считаются удалённой интеграцией.
+
+### UI/UX
+
+- [x] Базовые экраны Workspace, Projects, Knowledge/Documents, Settings.
+- [x] Адаптивная оболочка, Sidebar, project list, chat panel, document workspace.
+- [ ] Светлая/тёмная темы: переключатель, системный выбор по умолчанию, сохранение предпочтения.
+- [ ] Завершить UX всех экранов, состояния загрузки/ошибки/пустого списка, доступность и мобильную навигацию.
+- [ ] Полноценный Settings и защищённый Audit & Roadmap admin view (серверный RBAC), Reviews и пользовательские сценарии.
+
+### Межсервисная интеграция и runtime
+
+- [ ] OIDC/Keycloak: реальные login/logout, PKCE redirect, silent SSO, refresh/expiry, CORS.
+- [ ] Tenant/project switching с server-side membership validation и cross-tenant isolation.
+- [ ] Conversation API/SSE: полный event contract, reconnect/cancel/retry, citations и provenance.
+- [ ] Documents: upload, immutable versions, processing worker, SourceFragments, artifact preview/download.
+- [ ] PEA Retrieval Tool в Bionic Agent Runtime; grounded answers с проверяемыми citations.
+- [ ] Экспертные Reviews/findings/evidence и audit trail.
+- [ ] Knowledge, project memory и Skills с provenance, ownership и ACL.
+- [ ] Bionic fork image build/CI, manifest и проверка runtime в k3d.
+- [ ] Сквозные E2E/security/backup/restore и release acceptance.
+
+### Критерий готовности
+
+Наличие UI или API client означает только реализацию frontend-кода. Интеграция принимается после проверки с реальными Keycloak, Bionic, PEA, PostgreSQL, storage/worker и локальным LM Studio. GitHub Pages обслуживает только статический frontend; backend и inference остаются отдельными сервисами.
