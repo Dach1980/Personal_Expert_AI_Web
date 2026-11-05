@@ -351,3 +351,36 @@ Baseline runs: [41957689405](https://github.com/Dach1980/Personal_Expert_AI_Web/
 ### Критерий готовности
 
 Наличие UI или API client означает только реализацию frontend-кода. Интеграция принимается после проверки с реальными Keycloak, Bionic, PEA, PostgreSQL, storage/worker и локальным LM Studio. GitHub Pages обслуживает только статический frontend; backend и inference остаются отдельными сервисами.
+
+
+## UX и интеграция: актуализация 2026-11-05
+
+Текущий Web status: [IMPLEMENTATION_STATUS_2026-11-05.md](IMPLEMENTATION_STATUS_2026-11-05.md).
+
+### Выполнено в последнем UX change set
+- [x] Добавлен выбор существующего диалога из серверной истории.
+- [x] Добавлено создание нового диалога через существующий PEA Adapter endpoint.
+- [x] Настройки заменены на реальный read-only обзор сессии, пользователя, tenant context и build-time API/OIDC configuration.
+- [x] Светлая/тёмная тема с системным выбором и сохранением.
+- [x] Responsive layout для новых элементов настроек и диалогов.
+
+### Не завершено и не должно считаться готовым
+- [ ] Browser acceptance на desktop/tablet/mobile, включая direct URL, refresh, Back/Forward и обе темы.
+- [ ] Rename/archive/search conversations — сначала требуется backend/adapter contract.
+- [ ] Отдельные разделы Dialogues, Reviews, Knowledge Base и Skills.
+- [ ] Полноценный project details и управление участниками.
+- [ ] Tenant list/switch API и безопасный selector; tenant scope подтверждает только backend.
+- [ ] Защищённый Audit & Roadmap: PEA RBAC endpoint, persistent audit events, GitHub CI integration и admin-only UI. Не реализовывать как frontend-only скрытие.
+- [ ] Chat cancel/retry/reconnect и live SSE acceptance.
+- [ ] PEA Retrieval Tool в Bionic Agent Runtime с проверкой ACL до prompt context и citation allowlist.
+- [ ] Fork-specific Bionic image и интеграционная приёмка.
+
+### Текущий ближайший порядок
+1. Подтвердить CI для conversation navigation/settings change set.
+2. Завершить ручной UX/browser acceptance.
+3. Спроектировать и реализовать серверную admin RBAC/audit основу в PEA до появления admin UI.
+4. Добавить tenant membership list/switch contract и интегрировать его в Web.
+5. Довести conversation lifecycle и document UX.
+6. Выполнить Keycloak gateway runtime acceptance.
+7. Реализовать PEA Agent Runtime tool и grounded citations.
+8. Собрать fork-specific Bionic image и пройти сквозные E2E/security tests.
