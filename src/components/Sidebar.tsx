@@ -1,4 +1,4 @@
-import { BookOpen, FolderKanban, LayoutDashboard, Settings } from 'lucide-react';
+import { BookOpen, ClipboardList, FolderKanban, LayoutDashboard, Settings } from 'lucide-react';
 
 const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
 const items = [
@@ -8,7 +8,8 @@ const items = [
   ['settings', 'Настройки', Settings],
 ] as const;
 
-export function Sidebar({ active, onChange }: { active: string; onChange: (value: string) => void }) {
+export function Sidebar({ active, onChange, showAdmin = false }: { active: string; onChange: (value: string) => void; showAdmin?: boolean }) {
+  const visibleItems = showAdmin ? [...items, ['admin', 'Аудит и Roadmap', ClipboardList] as const] : items;
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -18,7 +19,7 @@ export function Sidebar({ active, onChange }: { active: string; onChange: (value
         <div><b>Personal Expert</b><small>AI WORKSPACE</small></div>
       </div>
       <nav>
-        {items.map(([id, label, Icon]) => (
+        {visibleItems.map(([id, label, Icon]) => (
           <button key={id} className={active === id ? 'nav-item active' : 'nav-item'} onClick={() => onChange(id)}>
             <Icon size={17} /><span>{label}</span>
           </button>
