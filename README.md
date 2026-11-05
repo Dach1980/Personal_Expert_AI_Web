@@ -15,7 +15,9 @@
 - [x] OIDC Authorization Code + PKCE S256 через public Keycloak client `pea-web`.
 - [x] Проверка ID token: RS256/JWKS, issuer, audience, expiry и nonce.
 - [x] Refresh token single-flight и восстановление браузерной сессии через Keycloak `prompt=none` после reload; токены остаются в памяти.
-- [x] API client для Bionic PEA Adapter: session, projects, conversations и message history.
+- [x] API client для Bionic PEA Adapter: identity session, tenant memberships, tenant-scoped projects, conversations и message history.
+- [x] Tenant selector backed by PEA active memberships; tenant switch clears dependent project/chat state and reloads the selected scope.
+- [x] Protected Audit & Roadmap UI backed by PEA system-admin permissions, audit events and tenant inventory endpoints through Bionic.
 - [x] SSE streaming client для ответов PEA conversation API.
 - [x] Document workspace: список/создание документов, загрузка immutable versions, enqueue processing, статусы, SourceFragments и artifacts.
 - [x] Просмотр artifact content и отображение Reviews / Findings / Evidence.
