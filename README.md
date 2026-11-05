@@ -7,30 +7,35 @@
 ## Текущий статус
 
 ### Реализовано в коде
-
 - [x] React + TypeScript + Vite; Sidebar, ProjectList, ChatPanel и DocumentWorkspace.
-- [x] Адаптивное рабочее пространство и переключение разделов.
+- [x] Адаптивное рабочее пространство и базовое переключение разделов.
 - [x] Типизированные модели пользователя, сессии, проектов, диалогов и документов.
 - [x] OIDC Authorization Code + PKCE S256 через public Keycloak client `pea-web`.
+- [x] Проверка ID token: RS256/JWKS, issuer, audience, expiry и nonce.
+- [x] Refresh token single-flight и восстановление браузерной сессии через Keycloak `prompt=none` после reload; токены остаются в памяти.
 - [x] API client для Bionic PEA Adapter: session, projects, conversations и message history.
 - [x] SSE streaming client для ответов PEA conversation API.
 - [x] Document workspace: список/создание документов, загрузка immutable versions, enqueue processing, статусы, SourceFragments и artifacts.
 - [x] Просмотр artifact content и отображение Reviews / Findings / Evidence.
 - [x] Bearer access token передаётся только в Authorization header; fetch credentials выключены.
 - [x] Явный demo mode через `VITE_DEMO_MODE=true`.
+- [x] GitHub Pages workflow читает публичные конфигурационные параметры из GitHub repository Variables.
+- [x] Workflow проверяет logo.svg в build artifact и опубликованном Pages URL.
 
-### Требует live-проверки
-
+### Требует CI/runtime подтверждения
+- [ ] Успешный Pages run после последних изменений и проверка опубликованного logo/favicon.
+- [ ] Добавить package-lock.json, перейти на `npm ci`, добавить полноценные unit/component tests и lint.
 - [ ] Применить `pea-web` client и `pea-api-context` scope к реальному Stack-managed Keycloak realm.
-- [ ] Проверить browser login/logout, PKCE redirect, state/nonce, refresh и token expiry.
+- [ ] Проверить browser login/logout, PKCE redirect, silent SSO, refresh rotation и token expiry на реальном Keycloak.
 - [ ] Проверить реальный HTTPS Bionic Adapter, точный CORS allowlist и приватную связность Bionic → PEA.
-- [ ] Проверить session/projects/conversations/SSE на развернутом PEA и локальной LM Studio модели.
+- [ ] Реализовать полноценный tenant switching и проверить server-side membership.
+- [ ] Завершить SSE citations/completion/error contract и проверку на реальном API.
 - [ ] Проверить upload → version → processing run → SourceFragment/artifact preview на реальных данных.
 - [ ] Провести E2E security tests: IDOR, cross-tenant/project, token leakage, XSS и CORS.
-- [ ] Проверить опубликованный Pages deployment и прямую перезагрузку SPA routes.
-- [ ] Подтвердить наличие logo.svg в опубликованном Pages artifact после исправления publicDir.
+- [ ] Подтвердить прямую перезагрузку SPA routes на production.
+- [ ] Реализовать PEA Retrieval Tool в Bionic Agent Runtime; grounded chat с citations ещё не готов.
 
-Наличие frontend-кода и mock/unit tests не означает, что интеграция с живым Keycloak/Bionic/PEA уже принята. До успешного E2E приложение не считается сквозным рабочим прототипом.
+Наличие frontend-кода и успешной сборки не означает, что интеграция с живым Keycloak/Bionic/PEA уже принята. До успешного E2E приложение не считается сквозным рабочим прототипом.
 
 ## Локальный запуск
 
@@ -44,7 +49,6 @@ npm run preview
 ```
 
 Для реальной интеграции задаются публичные frontend configuration values:
-
 - `VITE_API_BASE_URL` — HTTPS origin Bionic PEA Adapter;
 - `VITE_OIDC_ISSUER` — точный issuer общего Keycloak realm;
 - `VITE_OIDC_CLIENT_ID=pea-web`;
@@ -75,7 +79,6 @@ PEA остаётся владельцем доменных данных, tenant/
 
 - GitHub Pages размещает только статические файлы; backend, Keycloak, PostgreSQL, worker, storage и LM Studio работают отдельно.
 - PEA chat API использует локальный model provider без cloud fallback. Реальный inference требует доступной LM Studio и заданного `PEA_LLM_MODEL`.
-- Наличие document workspace не означает, что Agent Runtime уже выполняет retrieval по PEA SourceFragments. Для grounded chat нужен отдельный tenant/project-scoped retrieval tool и regression tests.
 - Проверка пользователя и разрешений выполняется backend на каждом запросе. Не доверять tenant/project identifiers из браузера без серверной авторизации.
 
 ## Документация
@@ -84,4 +87,5 @@ PEA остаётся владельцем доменных данных, tenant/
 - [Подробный roadmap до полноценного рабочего продукта](docs/PROJECT_ROADMAP.md)
 - [Bionic GPT capability audit](docs/BIONIC_CAPABILITY_AUDIT.md)
 - [Deployment](docs/DEPLOYMENT.md)
+- [Инструкция для Manus AI: подключение репозитория и deployment](docs/MANUS_HANDOFF.md)
 - [PEA repository reconciliation — 2026-11-04](https://github.com/Dach1980/Personal_Expert_AI/blob/main/docs/development/REPOSITORY_RECONCILIATION_2026-11-04.md)
