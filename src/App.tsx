@@ -6,7 +6,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { DocumentWorkspace } from './components/DocumentWorkspace';
 import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
-import type { ChatMessage, MessageCitation, Project, Session } from './types';
+import type { ChatMessage, Conversation, MessageCitation, Project, Session } from './types';
 
 const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -30,6 +30,7 @@ export default function App() {
   const [projects, setProjects] = useState<Project[]>(demoMode ? demoProjects : []);
   const [selectedId, setSelectedId] = useState<string | null>(demoMode ? demoProjects[0]?.id ?? null : null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>(demoMode ? demoMessages : []);
   const [loadState, setLoadState] = useState<LoadState>(demoMode ? 'ready' : 'loading');
   const [sending, setSending] = useState(false);
@@ -41,18 +42,53 @@ export default function App() {
     [projects, selectedId],
   );
 
-  const loadProjectChat = async (tenantId: string, project: Project) => {
-    setConversationId(null);
+  const loadConversation = async (tenantId: string, project: Project, conversation: Conversation) => {
+    setConversationId(conversation.id);
     setMessages([]);
     setChatError(null);
-    const conversations = await apiClient.getConversations(tenantId, project.id);
-    const conversation = conversations[0] ?? await apiClient.createConversation(tenantId, project.id);
-    setConversationId(conversation.id);
     const history = await apiClient.getMessages(tenantId, project.id, conversation.id);
     setMessages(history.map((message) => ({
       ...message,
       createdAt: message.created_at ?? new Date().toISOString(),
     })));
+  };
+
+  const loadProjectChat = async (tenantId: string, project: Project) => {
+    setConversationId(null);
+    setConversations([]);
+    setMessages([]);
+    setChatError(null);
+    const available = await apiClient.getConversations(tenantId, project.id);
+    const ordered = [...available].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
+    const conversation = ordered[0] ?? await apiClient.createConversation(tenantId, project.id);
+    setConversations(ordered.length ? ordered : [conversation]);
+    await loadConversation(tenantId, project, conversation);
+  };
+
+  const createNewConversation = async () => {
+    if (!session?.tenantId || !selectedProject || demoMode) return;
+    setChatError(null);
+    try {
+      const conversation = await apiClient.createConversation(session.tenantId, selectedProject.id);
+      setConversations((current) => [conversation, ...current]);
+      await loadConversation(session.tenantId, selectedProject, conversation);
+    } catch (cause) {
+      setChatError(cause instanceof Error ? cause.message : 'Не удалось создать диалог.');
+    }
+  };
+
+  const selectConversation = async (conversationIdValue: string) => {
+    if (!session?.tenantId || !selectedProject) return;
+    const conversation = conversations.find((item) => item.id === conversationIdValue);
+    if (!conversation) return;
+    setLoadState('loading');
+    try {
+      await loadConversation(session.tenantId, selectedProject, conversation);
+    } catch (cause) {
+      setChatError(cause instanceof Error ? cause.message : 'Не удалось загрузить историю диалога.');
+    } finally {
+      setLoadState('ready');
+    }
   };
 
   const loadWorkspace = async () => {
@@ -66,6 +102,7 @@ export default function App() {
         setProjects([]);
         setSelectedId(null);
         setConversationId(null);
+        setConversations([]);
         setMessages([]);
         setLoadState('ready');
         return;
@@ -88,6 +125,7 @@ export default function App() {
         setProjects([]);
         setSelectedId(null);
         setConversationId(null);
+        setConversations([]);
         setMessages([]);
         setLoadState('ready');
         return;
@@ -295,6 +333,10 @@ export default function App() {
                 <ChatPanel
                   project={selectedProject}
                   messages={messages}
+                  conversations={conversations}
+                  activeConversationId={conversationId}
+                  onSelectConversation={(id) => void selectConversation(id)}
+                  onNewConversation={() => void createNewConversation()}
                   onSend={(content) => void sendRealMessage(content)}
                   sending={sending}
                   error={chatError}
@@ -309,10 +351,31 @@ export default function App() {
           )}
 
           {nav === 'settings' && (
-            <section className="panel placeholder-panel">
-              <h2>Настройки системы</h2>
-              <p>Управление профилем, предпочтениями модели и локальной инфраструктурой будет подключено отдельно.</p>
-            </section>
+            <div className="settings-grid">
+              <section className="panel settings-panel">
+                <div className="panel-heading"><div><h2>Внешний вид</h2><p>Локальные предпочтения интерфейса этого браузера.</p></div></div>
+                <label className="settings-row">
+                  <span><b>Тема оформления</b><small>Выбор сохраняется на этом устройстве.</small></span>
+                  <select value={theme} onChange={(event) => setTheme(event.target.value as Theme)}>
+                    <option value="dark">Тёмная</option>
+                    <option value="light">Светлая</option>
+                  </select>
+                </label>
+              </section>
+              <section className="panel settings-panel">
+                <div className="panel-heading"><div><h2>Учётная запись</h2><p>Информация о текущей проверенной сессии.</p></div></div>
+                <div className="settings-row"><span><b>Статус</b><small>{demoMode ? 'Демонстрационный режим — доступ не проверяется.' : session?.authenticated ? 'Keycloak session authenticated' : 'Нет активной сессии'}</small></span><strong>{demoMode ? 'DEMO' : session?.authenticated ? 'Активна' : 'Не выполнен вход'}</strong></div>
+                <div className="settings-row"><span><b>Пользователь</b><small>{session?.displayName ?? 'Не определён'}</small></span></div>
+                <div className="settings-row"><span><b>Tenant context</b><small>{session?.tenantId ?? 'Не получен от API'}</small></span></div>
+                {!demoMode && session?.authenticated && <button className="secondary-button" onClick={() => apiClient.logout()}>Выйти из системы</button>}
+              </section>
+              <section className="panel settings-panel">
+                <div className="panel-heading"><div><h2>Подключения</h2><p>Состояние клиентской конфигурации без раскрытия токенов и секретов.</p></div></div>
+                <div className="settings-row"><span><b>API Adapter</b><small>{import.meta.env.VITE_API_BASE_URL ? 'Адрес задан при сборке frontend.' : 'Адрес не задан в сборке.'}</small></span><strong>{import.meta.env.VITE_API_BASE_URL ? 'Настроен' : 'Не настроен'}</strong></div>
+                <div className="settings-row"><span><b>Keycloak issuer</b><small>{import.meta.env.VITE_OIDC_ISSUER ? 'Issuer задан при сборке.' : 'Issuer не задан в сборке.'}</small></span><strong>{import.meta.env.VITE_OIDC_ISSUER ? 'Настроен' : 'Не настроен'}</strong></div>
+                <p className="muted">Настройки сервера, модели и хранилища управляются на backend и не редактируются из публичного браузера.</p>
+              </section>
+            </div>
           )}
 
           <footer className="page-footer">
