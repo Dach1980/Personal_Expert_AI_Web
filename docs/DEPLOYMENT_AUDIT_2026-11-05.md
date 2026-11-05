@@ -2,7 +2,7 @@
 
 Дата актуализации: 2026-11-05  
 Репозиторий: `Dach1980/Personal_Expert_AI_Web`  
-Проверенный исходный HEAD: `0caf1a6a568c6ad96a9a5b7f5a74b80e9b98a75c`  
+Проверенный исходный HEAD: `ec01cdd9bac1f425a0587450ab7f51379707e19f`  
 Локальный Manus commit, не интегрированный в GitHub: `b522b761dace46a3a81e183457b98a60cad990bf`
 
 ## Итог
@@ -24,13 +24,16 @@
 - Logo asset проверяется в artifact и опубликованном endpoint.
 - Vite base path: `/Personal_Expert_AI_Web/`.
 
-## Оставшиеся критерии P0
+## Результат P0 после change set
 
-1. CI на актуальном commit: `npm ci`, tests, TypeScript/Vite build — PASS.
-2. Artifact содержит `index.html`, `404.html`, `logo.svg`, JS и CSS.
-3. Pages workflow проверяет homepage, logo и JS/CSS assets.
-4. Опубликованные SPA paths `/projects`, `/knowledge`, `/settings` отдают приложение; прямой browser refresh подтверждён.
-5. README и roadmap соответствуют реальному commit и CI.
+- [x] CI на commit `ec01cdd9bac1f425a0587450ab7f51379707e19f`: `npm ci`, frontend protocol tests, TypeScript/Vite build — PASS.
+- [x] Artifact включает SPA fallback `dist/404.html` (создаётся копированием `dist/index.html`), logo и Vite bundles.
+- [x] Pages workflow: homepage, logo, JS/CSS и маршруты `/projects`, `/knowledge`, `/settings` — smoke tests PASS.
+- [x] Pages deploy — SUCCESS: [Actions run 41960861523](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41960861523).
+- [x] URL-aware navigation and browser `popstate` handling added; theme toggle added.
+- [ ] Дополнительно выполнить ручную проверку в браузере: открыть каждый URL напрямую, обновить страницу, проверить Back/Forward и переключение темы на desktop/mobile.
+
+**Статус P0: CI/CD и route smoke checks закрыты; ручная browser acceptance остаётся.**
 
 ## Ограничения
 
@@ -42,7 +45,12 @@
 
 ## Следующие этапы
 
-После закрытия P0 продолжить UI/UX, live OIDC/Keycloak, tenant/project switching, conversation/SSE/citations, document ingestion, PEA Retrieval Tool в Bionic и сквозные security/E2E проверки.
+1. Завершить ручную browser acceptance и мелкие UX-правки темы/маршрутов.
+2. Продолжить UI/UX остальных экранов.
+3. Провести live OIDC/Keycloak acceptance.
+4. Реализовать tenant/project switching с server-side authorization.
+5. Завершить conversation/SSE/citations, document ingestion и PEA Retrieval Tool в Bionic.
+6. Провести сквозные security/E2E проверки.
 
 ## Источники
 
