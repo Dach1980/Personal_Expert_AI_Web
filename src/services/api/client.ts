@@ -172,9 +172,11 @@ export const apiClient: ExpertApi = {
       }
       if (event.type === 'citation' || event.type === 'citations') {
         const citationPayload = 'citations' in data ? data.citations : data;
-        const encoded = JSON.stringify(citationPayload);
-        for (const citation of parseCitationPayload(encoded)) {
-          input.onCitation?.(citation as MessageCitation);
+        if (citationPayload !== undefined) {
+          const encoded = JSON.stringify(citationPayload);
+          for (const citation of parseCitationPayload(encoded)) {
+            input.onCitation?.(citation as MessageCitation);
+          }
         }
       }
       // PEA currently emits done; future usage/meta/heartbeat events remain non-text.
