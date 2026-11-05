@@ -309,3 +309,14 @@ PostgreSQL       Document storage      Local model provider
 - Наличие SourceFragments не означает, что Agent Runtime уже выполняет retrieval и цитирует доказательства.
 
 **Главный критерий готовности Personal Expert AI:** пользователь входит через Keycloak, выбирает разрешённый tenant и проект, загружает документы, получает проверяемые результаты обработки, задаёт вопросы в чате и получает ответы с точными доказательствами из доступных ему версий документов.
+
+
+## Дополнение по аудиту deployment от 2026-11-05
+
+Последняя read-only проверка Manus выполнена на commit `6b8ef05992fe09bcd98596454b11ed5197d06b79`. Результат зафиксирован отдельно: [Deployment audit 2026-11-05](DEPLOYMENT_AUDIT_2026-11-05.md).
+
+**Текущий статус этапа 0: BLOCKED.** На проверенном commit `npm test` прошёл (5/5), но `npm run build` завершился ошибкой TypeScript в `src/services/api/oidc.ts:90` (`JsonWebKey.kid`). GitHub Pages отдаёт некорректный опубликованный контент: необработанный `%BASE_URL%`, а `/logo.svg` возвращает 404. Последний известный push workflow — failed run [41956088626](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41956088626).
+
+**Ближайший приоритет:** исправить тип JWK; проверить lockfile и `npm ci`; проверить, что workflow собирает и публикует именно `dist/`; проверить Pages base path и post-deploy smoke tests. До успешного Actions run и проверки опубликованного URL этап 0 не закрывать.
+
+GitHub repository Variables фактически не проверены из-за HTTP 403 на read-only доступ; их значения не раскрывались. Live Keycloak, Bionic Adapter и PEA API не подключены/не подтверждены. Runtime acceptance остаётся отдельным блокером.
