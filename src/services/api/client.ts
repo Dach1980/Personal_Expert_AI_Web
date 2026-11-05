@@ -1,6 +1,7 @@
-import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
+import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, MessageCitation, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
 import type { ExpertApi, SendMessageInput } from './types';
 import { beginLogin, endLoginSession, getAccessToken, initializeOidc } from './oidc';
+import { parseCitationPayload, parseSseStream } from './sse';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 
@@ -152,33 +153,30 @@ export const apiClient: ExpertApi = {
       );
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split(/\r?\n\r?\n/);
-        buffer = events.pop() ?? '';
-        for (const eventText of events) {
-          const lines = eventText.split(/\r?\n/);
-          const eventName = lines.find((line) => line.startsWith('event:'))?.slice(6).trim();
-          const data = lines.filter((line) => line.startsWith('data:')).map((line) => line.slice(5).trim()).join('\n');
-          if (!data) continue;
-          if (eventName === 'error') {
-            const parsed = JSON.parse(data) as { message?: string };
-            throw new Error(parsed.message ?? 'Ошибка локальной модели.');
-          }
-          if (eventName === 'text_delta') {
-            const parsed = JSON.parse(data) as { delta?: string };
-            if (parsed.delta) yield parsed.delta;
-          }
+    for await (const event of parseSseStream(response.body)) {
+      if (event.event === 'error') {
+        let message = 'Ошибка локальной модели.';
+        try {
+          const parsed = JSON.parse(event.data) as { message?: string };
+          message = parsed.message ?? message;
+        } catch {
+          message = event.data || message;
+        }
+        throw new Error(message);
+      }
+      if (event.event === 'text_delta') {
+        const parsed = JSON.parse(event.data) as { delta?: string; text?: string };
+        const delta = parsed.delta ?? parsed.text;
+        if (delta) yield delta;
+        continue;
+      }
+      if (event.event === 'citation' || event.event === 'citations') {
+        for (const citation of parseCitationPayload(event.data)) {
+          input.onCitation?.(citation as MessageCitation);
         }
       }
-    } finally {
-      reader.releaseLock();
+      // message_start, message_end, usage and heartbeat events are valid
+      // protocol events; they do not add visible text to the assistant bubble.
     }
   },
 };
