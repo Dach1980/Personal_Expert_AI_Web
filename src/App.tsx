@@ -5,6 +5,8 @@ import { ProjectList } from './components/ProjectList';
 import { ChatPanel } from './components/ChatPanel';
 import { DocumentWorkspace } from './components/DocumentWorkspace';
 import { AdminAuditRoadmap } from './components/AdminAuditRoadmap';
+import { DemoAdminAuditRoadmap } from './components/DemoAdminAuditRoadmap';
+import { DemoDocumentWorkspace } from './components/DemoDocumentWorkspace';
 import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
 import { chooseTenantId } from './services/tenant-selection';
@@ -307,7 +309,7 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar active={nav} onChange={navigate} showAdmin={adminAccess} />
+      <Sidebar active={nav} onChange={navigate} showAdmin={demoMode || adminAccess} />
       <main className="main-area">
         <header className="topbar">
           <span>Рабочее пространство　/　<b>{activeProject?.name ?? 'Проекты'}</b></span>
@@ -395,12 +397,14 @@ export default function App() {
                 onSelect={(project) => void selectProject(project)}
               />
               {nav === 'knowledge' ? (
-                selectedProject && session?.tenantId && !demoMode ? (
+                demoMode ? (
+                  <DemoDocumentWorkspace />
+                ) : selectedProject && session?.tenantId ? (
                   <DocumentWorkspace tenantId={session.tenantId} project={selectedProject} />
                 ) : (
                   <section className="panel connection-panel">
                     <h2>Документы проекта</h2>
-                    <p>Для просмотра документов выберите авторизованный проект. В демонстрационном режиме реальные документы недоступны.</p>
+                    <p>Для просмотра документов выберите авторизованный проект и войдите в систему.</p>
                   </section>
                 )
               ) : demoMode && activeProject ? (
@@ -426,9 +430,11 @@ export default function App() {
             </div>
           )}
 
-          {nav === 'admin' && adminAccess && <AdminAuditRoadmap />}
+          {nav === 'admin' && demoMode && <DemoAdminAuditRoadmap />}
 
-          {nav === 'admin' && !adminAccess && (
+          {nav === 'admin' && !demoMode && adminAccess && <AdminAuditRoadmap />}
+
+          {nav === 'admin' && !demoMode && !adminAccess && (
             <section className="panel connection-panel" role="alert"><h2>Доступ запрещён</h2><p>Для раздела требуются административные разрешения PEA system.audit.read и/или system.tenants.read.</p></section>
           )}
 
