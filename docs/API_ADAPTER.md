@@ -115,3 +115,18 @@ GitHub Actions подтверждает frontend build и backend unit/integrati
 ## Статус
 
 React API client подключён к UI runtime для Keycloak PKCE session, projects, conversations и streaming chat. DocumentWorkspace подключён в раздел «База знаний» и содержит upload/version/processing/SourceFragment/artifact/evidence flows. Frontend build и Pages deployment прошли успешно на commit `e54e4680625addd50601516964566cf83c0fdd72`. Применение Keycloak realm config, live browser login, real Bionic↔PEA network, upload/processing и LM Studio inference требуют отдельного runtime E2E.
+
+
+## Tenant switching and Audit & Roadmap — 2026-11-05
+
+The Web client now uses an identity-first flow:
+
+1. `GET /api/pea/session` resolves the Keycloak identity and does not require a selected tenant.
+2. `GET /api/pea/tenants` returns only active memberships for that identity.
+3. The UI remembers the selected tenant UUID as a preference, then calls `/api/pea/tenants/{tenant_id}/projects`.
+4. Bionic derives `X-Tenant-ID` from the fixed tenant-scoped adapter path and forwards the verified caller token. PEA independently verifies active membership and tenant status for every request.
+5. Switching tenant clears project, conversation and message state before loading the new tenant's projects.
+
+The protected Audit & Roadmap screen uses the real PEA administrative endpoints through Bionic. The sidebar is shown only when `/api/pea/admin/me` reports `system.audit.read` or `system.tenants.read`; this is a UX condition, not an authorization boundary. Audit events and global tenant inventory are each independently permission-checked by PEA and PostgreSQL RLS. Initial system-admin grant provisioning remains an operator-only prerequisite.
+
+Source code is committed on `main`. CI and live browser/Keycloak/Bionic/PEA runtime acceptance are not claimed until verified on the latest commits.
