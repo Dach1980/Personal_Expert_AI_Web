@@ -12,7 +12,7 @@ Frontend — React + TypeScript + Vite. GitHub Actions собирает ката
 
 GitHub Pages по умолчанию собирается с `VITE_DEMO_MODE=true`. Это позволяет открыть интерфейс без Keycloak, Bionic Adapter, PEA API и PostgreSQL. Демонстрационные проекты, документы, события и административный экран являются синтетическими примерами; загрузка и обработка документов, проверка прав и генерация ответов моделью в demo mode не выполняются.
 
-Чтобы переключить Pages на production-клиент, после подготовки реального HTTPS Adapter и Keycloak issuer явно добавить repository variable `VITE_DEMO_MODE=false`. Перед этим обязательно задать `VITE_API_BASE_URL`, `VITE_OIDC_ISSUER`, корректные redirect URI и CORS. По умолчанию отсутствие переменной означает demo mode.
+Workflow намеренно фиксирует `VITE_DEMO_MODE=true`, чтобы публичный сайт оставался доступным без backend и не зависел от случайно заданных repository variables. Переключать Pages на production-клиент можно только отдельным изменением workflow после подготовки реального HTTPS Adapter, Keycloak issuer, redirect URI и CORS и успешной live acceptance. Перед таким переключением обязательно задать `VITE_API_BASE_URL` и `VITE_OIDC_ISSUER`.
 
 ## Публичная конфигурация frontend
 
