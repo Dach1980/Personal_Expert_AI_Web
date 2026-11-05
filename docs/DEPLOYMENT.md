@@ -8,6 +8,12 @@ Frontend — React + TypeScript + Vite. GitHub Actions собирает ката
 
 Исходный логотип находится в `assets/logo.svg`. Vite использует `assets/` как `publicDir` и копирует SVG в `dist/logo.svg`. Sidebar, footer и favicon используют URL с `BASE_URL`. Workflow проверяет наличие логотипа в build artifact и после публикации загружает опубликованный `logo.svg` через HTTPS.
 
+## Режим публичной демонстрации
+
+GitHub Pages по умолчанию собирается с `VITE_DEMO_MODE=true`. Это позволяет открыть интерфейс без Keycloak, Bionic Adapter, PEA API и PostgreSQL. Демонстрационные проекты, документы, события и административный экран являются синтетическими примерами; загрузка и обработка документов, проверка прав и генерация ответов моделью в demo mode не выполняются.
+
+Чтобы переключить Pages на production-клиент, после подготовки реального HTTPS Adapter и Keycloak issuer явно добавить repository variable `VITE_DEMO_MODE=false`. Перед этим обязательно задать `VITE_API_BASE_URL`, `VITE_OIDC_ISSUER`, корректные redirect URI и CORS. По умолчанию отсутствие переменной означает demo mode.
+
 ## Публичная конфигурация frontend
 
 Workflow читает следующие GitHub repository variables (Settings → Secrets and variables → Actions → Variables):
