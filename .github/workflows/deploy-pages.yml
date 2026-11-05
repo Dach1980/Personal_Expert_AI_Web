@@ -82,7 +82,7 @@ jobs:
           fi
           curl --fail --silent --show-error --location --retry 10 --retry-delay 5 --retry-all-errors "${PAGE_URL}logo.svg" -o /tmp/pea-logo.svg
           test -s /tmp/pea-logo.svg
-          for route in projects knowledge settings; do
+          for route in projects knowledge settings admin; do
             curl --silent --show-error --location --retry 3 --retry-delay 2 "${PAGE_URL}${route}" -o "/tmp/pea-${route}.html"
             grep -q 'id="root"' "/tmp/pea-${route}.html"
           done
