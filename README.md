@@ -89,6 +89,7 @@ PEA остаётся владельцем доменных данных, tenant/
 ## Документация
 
 - [API Adapter contract and current integration status](docs/API_ADAPTER.md)
+- [Cross-repository API contract and integrated E2E acceptance plan — 2026-11-05](docs/CROSS_REPOSITORY_CONTRACT_2026-11-05.md)
 - [Подробный roadmap до полноценного рабочего продукта](docs/PROJECT_ROADMAP.md)
 - [Bionic GPT capability audit](docs/BIONIC_CAPABILITY_AUDIT.md)
 - [Deployment](docs/DEPLOYMENT.md)
