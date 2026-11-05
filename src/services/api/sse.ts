@@ -97,8 +97,12 @@ export type MessageCitation = {
 export function parseCitationPayload(data: string): MessageCitation[] {
   const parsed = JSON.parse(data) as MessageCitation | MessageCitation[] | { citations?: MessageCitation[] };
   if (Array.isArray(parsed)) return parsed;
-  if ('citations' in parsed && Array.isArray(parsed.citations)) return parsed.citations;
-  return [parsed as MessageCitation];
+  if (parsed && typeof parsed === 'object' && 'citations' in parsed &&
+      Array.isArray((parsed as { citations?: MessageCitation[] }).citations)) {
+    return (parsed as { citations: MessageCitation[] }).citations;
+  }
+  if (parsed && typeof parsed === 'object') return [parsed as MessageCitation];
+  return [];
 }
 
 export type NormalizedSseEvent = {
