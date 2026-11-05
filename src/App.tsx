@@ -115,6 +115,7 @@ export default function App() {
         await loadProjectChat(currentSession.tenantId, firstProject);
       } else {
         setConversationId(null);
+        setConversations([]);
         setMessages([]);
       }
       setLoadState('ready');
