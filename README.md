@@ -89,4 +89,5 @@ PEA остаётся владельцем доменных данных, tenant/
 - [Deployment](docs/DEPLOYMENT.md)
 - [Инструкция для Manus AI: подключение репозитория и deployment](docs/MANUS_HANDOFF.md)
 - [Статус реализации на 2026-11-05](docs/IMPLEMENTATION_STATUS_2026-11-05.md)
+- [Deployment audit по результатам Manus — 2026-11-05](docs/DEPLOYMENT_AUDIT_2026-11-05.md)
 - [PEA repository reconciliation — 2026-11-04](https://github.com/Dach1980/Personal_Expert_AI/blob/main/docs/development/REPOSITORY_RECONCILIATION_2026-11-04.md)
