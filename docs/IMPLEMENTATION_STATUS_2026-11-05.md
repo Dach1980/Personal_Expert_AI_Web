@@ -39,7 +39,7 @@
 - Добавлен рабочий экран локальных предпочтений темы.
 - Показывает read-only состояние сессии, пользователя, tenant context и наличие build-time API/OIDC config.
 - Backend provider/model/storage settings намеренно не редактируются из публичного браузера.
-- Tenant selection/switch отсутствует; один tenant context приходит в проверенной сессии.
+- Tenant selection/switch source code added: Web discovers active memberships via Bionic `/api/pea/tenants`, remembers only the preferred tenant UUID locally, and loads projects through the selected tenant-scoped route. PEA revalidates membership on every request. CI/browser and live Keycloak acceptance are pending.
 
 ## UX audit — найденные незакрытые области
 
@@ -47,8 +47,8 @@
 2. Projects list не имеет полного поиска/сортировки, project details и управления участниками.
 3. Chat имеет history selection/new conversation, но нет rename/archive/search, retry/cancel и явного состояния reconnect.
 4. Settings — только read-only overview и theme preference; нет профильных, notification, model/provider и infrastructure controls.
-5. Tenant/project switcher не реализован. Нельзя подменять это локальным select без серверной проверки membership.
-6. Admin Audit & Roadmap нельзя безопасно показывать по frontend-only флагу. Требуется PEA admin endpoint с серверной RBAC-проверкой, audit persistence и проверкой полномочий на каждом запросе.
+5. Tenant switcher added to Web. The selector is backed by `GET /api/pea/tenants`; changing tenant clears project, conversation and message state before loading data for the newly selected scope. PEA membership validation remains authoritative.
+6. Admin Audit & Roadmap UI is implemented and calls Bionic proxy routes for PEA `/admin/me`, `/admin/audit-events` and `/admin/tenants`. Sidebar visibility is based on the PEA permission response; every data endpoint still enforces its own server-side permission. Initial system-admin grant provisioning and CI/runtime acceptance remain.
 7. Document UI требует более явных upload/progress/retry/empty/error states и preview navigation по страницам/листам.
 8. Responsive layout и клавиатурная доступность требуют ручной browser acceptance на desktop/tablet/mobile.
 
@@ -76,3 +76,14 @@
 ## Правило приёмки
 
 Source implementation, CI success and live runtime acceptance are separate statuses. Do not mark Keycloak, tenant switching, document processing, local inference or retrieval as runtime-ready without reproducible end-to-end evidence. No mock inference is accepted as LM Studio verification.
+
+
+## Tenant switching and Audit & Roadmap implementation update — 2026-11-05
+
+- Web session is now identity-only until a tenant is selected. Active tenant memberships are loaded from `GET /api/pea/tenants`.
+- The preferred tenant UUID is stored as a UI preference only. It is not an authorization credential. Each tenant-scoped request is routed through Bionic and revalidated by PEA using `X-Tenant-ID` plus active membership.
+- Switching tenant clears selected project, conversation history and messages before requesting projects in the new scope.
+- The protected Audit & Roadmap screen calls real PEA administrative read APIs through Bionic: `/admin/me`, `/admin/audit-events`, `/admin/tenants`. PEA permissions control the data; the frontend only hides navigation for non-admin users as a UX measure.
+- Bionic now accepts Keycloak identity tokens without a `tenant_id` claim, exposes membership/admin proxy routes, and derives the upstream tenant header from its fixed tenant-scoped route.
+- The PEA session endpoint now returns identity without requiring a selected tenant; tenant selection remains a separate membership-validated step.
+- Source changes are committed to `main`. No current-commit CI success or live E2E is claimed until the corresponding workflows and runtime checks are verified.
