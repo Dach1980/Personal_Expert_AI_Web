@@ -48,6 +48,7 @@ test('normalizes single, array and wrapped citation payloads', () => {
   assert.deepEqual(parseCitationPayload('{"title":"A"}'), [{ title: 'A' }]);
   assert.deepEqual(parseCitationPayload('[{"title":"A"},{"title":"B"}]'), [{ title: 'A' }, { title: 'B' }]);
   assert.deepEqual(parseCitationPayload('{"citations":[{"title":"A"}]}'), [{ title: 'A' }]);
+  assert.deepEqual(parseCitationPayload('null'), []);
 });
 
 test('normalizes the JSON envelope used by the PEA streaming API', () => {
