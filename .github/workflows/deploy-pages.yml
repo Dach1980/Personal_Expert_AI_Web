@@ -45,6 +45,8 @@ jobs:
             echo "::warning::Repository variable VITE_OIDC_ISSUER is not configured; Keycloak login will remain unavailable."
           fi
           npm run build
+      - name: Prepare GitHub Pages SPA fallback
+        run: cp dist/index.html dist/404.html
       - name: Verify published branding assets
         run: |
           test -s dist/logo.svg
@@ -79,6 +81,10 @@ jobs:
           fi
           curl --fail --silent --show-error --location --retry 10 --retry-delay 5 --retry-all-errors "${PAGE_URL}logo.svg" -o /tmp/pea-logo.svg
           test -s /tmp/pea-logo.svg
+          for route in projects knowledge settings; do
+            curl --silent --show-error --location --retry 3 --retry-delay 2 "${PAGE_URL}${route}" -o "/tmp/pea-${route}.html"
+            grep -q 'id="root"' "/tmp/pea-${route}.html"
+          done
           PAGE_URL="${PAGE_URL}" node --input-type=module <<'NODE'
           import { readFileSync } from 'node:fs';
           const html = readFileSync('/tmp/pea-index.html', 'utf8');
