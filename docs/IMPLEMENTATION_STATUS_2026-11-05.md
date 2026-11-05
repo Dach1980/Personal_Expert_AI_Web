@@ -24,7 +24,7 @@
 - Добавлена нормализация payload `citation`/`citations` и типизация source metadata.
 - Chat UI показывает citation title, документ, страницу/лист и excerpt; внешние ссылки открываются только для HTTP(S) URL с `noopener noreferrer`.
 - Добавлены unit tests для framing и citation payload normalization; они подключены к CI.
-- Важное ограничение: backend/Bionic event contract должен совпасть с `text_delta`, `citation`/`citations`, `error`. Реальный поток, порядок событий, history persistence и source navigation ещё не проверены E2E.
+- Важное ограничение: PEA сейчас реально эмитит `text_delta`, `done`, `error`; backend citations ещё не эмитятся. Frontend умеет принимать `citation`/`citations`, но полноценные grounded citations появятся только после Bionic Agent Runtime tool и PEA provenance pipeline. Реальный поток и history persistence ещё не проверены E2E.
 
 ## Межрепозиторный статус
 
