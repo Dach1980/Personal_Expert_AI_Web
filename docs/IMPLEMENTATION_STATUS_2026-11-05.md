@@ -13,7 +13,7 @@
 - SPA routes: `/`, `/projects`, `/knowledge`, `/settings`; `popstate` синхронизирует Back/Forward.
 - Светлая/тёмная тема: системная тема при первом запуске, ручной выбор, сохранение в localStorage.
 - Подтверждённый успешный deployment до последних UX-изменений: [run 41960961373](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41960961373), commit `704ee545e7b3c6a6a08097a0d2b4b11c136772a5`.
-- Последний UX change set: `6e5dbce`, `16e065c`, `9b94ad4`. Его Pages workflows: [41961641314](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41961641314) и [41961641688](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41961641688). Результат необходимо считать подтверждённым только после завершения обоих runs.
+- Последний UX change set: `6e5dbce`, `16e065c`, `9b94ad4`. Его workflows завершились SUCCESS: [41961641314](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41961641314) (npm ci, frontend tests, TypeScript/Vite build, SPA fallback, asset checks и post-deploy smoke tests) и [41961641688](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41961641688) (Pages build/deploy).
 
 ### Identity / OIDC frontend
 - Authorization Code + PKCE S256.
@@ -56,7 +56,7 @@
 
 | Gate | Статус | Что остаётся |
 |---|---|---|
-| Frontend CI / Pages | PARTIAL → awaiting latest runs | Подтвердить runs 41961641314 и 41961641688 |
+| Frontend CI / Pages | PASS for UX change set | Runs 41961641314 and 41961641688 SUCCESS; later docs-only commits have queued workflows |
 | UX/navigation | PARTIAL | Полные разделы, responsive acceptance, rename/archive, полноценные Settings |
 | OIDC | SOURCE IMPLEMENTED / RUNTIME BLOCKED | Реальный Keycloak, gateway trust boundary, token lifecycle E2E |
 | Tenant/project | PARTIAL | Tenant list/switch API, UI, membership and RLS negative tests |
