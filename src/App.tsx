@@ -6,7 +6,7 @@ import { ChatPanel } from './components/ChatPanel';
 import { DocumentWorkspace } from './components/DocumentWorkspace';
 import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
-import type { ChatMessage, Project, Session } from './types';
+import type { ChatMessage, MessageCitation, Project, Session } from './types';
 
 const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -130,14 +130,22 @@ export default function App() {
     setMessages((old) => [
       ...old,
       { id: crypto.randomUUID(), role: 'user', content, createdAt: now },
-      { id: assistantId, role: 'assistant', content: '', createdAt: now },
+      { id: assistantId, role: 'assistant', content: '', createdAt: now, citations: [] },
     ]);
+    const appendCitation = (citation: MessageCitation) => {
+      setMessages((old) => old.map((message) =>
+        message.id === assistantId
+          ? { ...message, citations: [...(message.citations ?? []), citation] }
+          : message,
+      ));
+    };
     try {
       for await (const delta of apiClient.sendMessage({
         tenantId: session.tenantId,
         projectId: selectedProject.id,
         conversationId,
         content,
+        onCitation: appendCitation,
       })) {
         setMessages((old) => old.map((message) =>
           message.id === assistantId
