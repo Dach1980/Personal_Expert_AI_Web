@@ -36,14 +36,15 @@ jobs:
           VITE_OIDC_ISSUER: ${{ vars.VITE_OIDC_ISSUER }}
           VITE_OIDC_CLIENT_ID: ${{ vars.VITE_OIDC_CLIENT_ID }}
           VITE_OIDC_REDIRECT_URI: ${{ vars.VITE_OIDC_REDIRECT_URI }}
-          VITE_DEMO_MODE: "false"
+          VITE_DEMO_MODE: ${{ vars.VITE_DEMO_MODE || 'true' }}
         run: |
-          if [ -z "$VITE_API_BASE_URL" ]; then
+          if [ "$VITE_DEMO_MODE" != "true" ] && [ -z "$VITE_API_BASE_URL" ]; then
             echo "::warning::Repository variable VITE_API_BASE_URL is not configured; live API calls will remain unavailable."
           fi
-          if [ -z "$VITE_OIDC_ISSUER" ]; then
+          if [ "$VITE_DEMO_MODE" != "true" ] && [ -z "$VITE_OIDC_ISSUER" ]; then
             echo "::warning::Repository variable VITE_OIDC_ISSUER is not configured; Keycloak login will remain unavailable."
           fi
+          echo "Frontend demo mode: $VITE_DEMO_MODE"
           npm run build
       - name: Prepare GitHub Pages SPA fallback
         run: cp dist/index.html dist/404.html
