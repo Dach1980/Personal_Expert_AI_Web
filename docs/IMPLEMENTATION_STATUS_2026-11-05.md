@@ -108,3 +108,17 @@ Demo mode is a UI demonstration only. It does not authenticate users, verify per
 ### Production mode gate
 
 Do not switch the public Pages workflow to `VITE_DEMO_MODE=false` until a real HTTPS Bionic Adapter and Stack-managed Keycloak realm are configured and browser login, tenant isolation and API connectivity have passed live acceptance. The local LM Studio and document processing path still requires the primary workstation.
+
+## Blank-screen incident mitigation — 2026-11-06
+
+User report: GitHub Pages URL returned a white screen in the browser. Static HTML availability alone did not establish that the React application mounted successfully. The connector cannot inspect the user's browser console or execute a real browser session, so the precise original runtime exception remains unconfirmed.
+
+Changes committed to `main`:
+
+- `src/components/AppErrorBoundary.tsx` catches React render/lifecycle failures, logs the local diagnostic to the browser console and displays the exception name/message with a reload action instead of leaving a blank React surface.
+- `src/main.tsx` mounts the application inside the error boundary and explicitly checks that `#root` exists.
+- `index.html` now contains a visible pre-mount loading fallback and a no-JavaScript notice. If the entry bundle fails to load, the page should no longer be completely blank.
+
+Commits: `07242d3`, `1e37fd3`, `bcde780`.
+
+These changes improve failure visibility; they do not prove the original runtime fault is fixed. The latest Pages workflow must pass build and post-deploy smoke checks, followed by manual browser acceptance. If the fallback remains visible, inspect Network for failed JS/CSS assets. If the error boundary appears, capture its displayed exception and the first Console stack trace. Do not switch off Demo mode or weaken authentication to mask the failure.
