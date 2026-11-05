@@ -14,5 +14,5 @@ test('demo welcome message explicitly discloses that model inference is not perf
   const welcome = demoMessages[0].content.toLowerCase();
   assert.match(welcome, /демонстрационном режиме/);
   assert.match(welcome, /не генерируются моделью/);
-  assert.match(welcome, /не анализировались/);
+  assert.match(welcome, /не анализируются/);
 });
