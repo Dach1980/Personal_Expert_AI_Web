@@ -87,3 +87,24 @@ Source implementation, CI success and live runtime acceptance are separate statu
 - Bionic now accepts Keycloak identity tokens without a `tenant_id` claim, exposes membership/admin proxy routes, and derives the upstream tenant header from its fixed tenant-scoped route.
 - The PEA session endpoint now returns identity without requiring a selected tenant; tenant selection remains a separate membership-validated step.
 - Source changes are committed to `main`. No current-commit CI success or live E2E is claimed until the corresponding workflows and runtime checks are verified.
+
+
+## Public GitHub Pages demo mode — 2026-11-05
+
+- [x] GitHub Pages workflow now forces `VITE_DEMO_MODE=true`; it does not depend on API/OIDC repository variables and cannot accidentally switch to live mode because of a stale variable.
+- [x] Demo mode bypasses OIDC and backend initialization.
+- [x] Demo workspace includes three clearly labelled sample projects and a demo chat that explicitly states that no model inference or document analysis is performed.
+- [x] Knowledge/Documents includes a synthetic document library, sample versions, processing states and sample source fragments. No real files are uploaded or processed.
+- [x] Audit & Roadmap navigation is visible in demo mode and opens a separate synthetic screen. Demo permission labels and audit events are not real PEA grants or audit records.
+- [x] Workspace summary counters reflect the demo fixtures.
+- [x] Pages smoke test includes direct SPA route `/admin`.
+- [x] Tests cover stable demo project fixtures and explicit disclosure that inference is not performed.
+- [x] Cross-repository API contract and integrated E2E acceptance plan added at `docs/CROSS_REPOSITORY_CONTRACT_2026-11-05.md`.
+
+### Demo limitations
+
+Demo mode is a UI demonstration only. It does not authenticate users, verify permissions, access a live tenant, upload documents, run OCR/ingestion, query PEA, call Bionic, or generate model answers. The synthetic admin screen is never an authorization boundary and must not be used to infer real system-admin status.
+
+### Production mode gate
+
+Do not switch the public Pages workflow to `VITE_DEMO_MODE=false` until a real HTTPS Bionic Adapter and Stack-managed Keycloak realm are configured and browser login, tenant isolation and API connectivity have passed live acceptance. The local LM Studio and document processing path still requires the primary workstation.
