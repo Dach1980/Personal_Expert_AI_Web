@@ -18,7 +18,8 @@ type IdTokenClaims = {
   nonce?: string;
 };
 
-type JwkSet = { keys: JsonWebKey[] & Array<JsonWebKey & { kid?: string; alg?: string; use?: string }> };
+type SigningJwk = JsonWebKey & { kid?: string; alg?: string; use?: string };
+type JwkSet = { keys: SigningJwk[] };
 
 let tokens: TokenSet | null = null;
 let expiresAt = 0;
