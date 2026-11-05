@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -24,11 +24,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Generate lockfile when missing
-        run: |
-          if [ ! -f package-lock.json ]; then
-            npm install --package-lock-only --ignore-scripts
-          fi
+      - name: Verify committed lockfile
+        run: test -s package-lock.json
       - name: Install locked dependencies
         run: npm ci
       - name: Run frontend protocol tests
@@ -52,15 +49,6 @@ jobs:
         run: |
           test -s dist/logo.svg
           grep -q 'logo.svg' dist/index.html
-      - name: Commit generated lockfile
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(web): add reproducible npm lockfile"
-            git push
-          fi
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload build artifact
@@ -78,9 +66,32 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
-      - name: Smoke test published Pages assets
+      - name: Smoke test published Pages site and assets
         env:
           PAGE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 10 --retry-delay 5 --retry-all-errors "${PAGE_URL}" -o /tmp/pea-index.html
+          test -s /tmp/pea-index.html
+          if grep -q '%BASE_URL%' /tmp/pea-index.html; then
+            echo "::error::Unresolved Vite BASE_URL placeholder in deployed index.html"
+            exit 1
+          fi
           curl --fail --silent --show-error --location --retry 10 --retry-delay 5 --retry-all-errors "${PAGE_URL}logo.svg" -o /tmp/pea-logo.svg
           test -s /tmp/pea-logo.svg
+          PAGE_URL="${PAGE_URL}" node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const html = readFileSync('/tmp/pea-index.html', 'utf8');
+          const pageUrl = process.env.PAGE_URL;
+          const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
+            .map((match) => match[1])
+            .filter((ref) => /^\/Personal_Expert_AI_Web\/.*\\.(?:js|css)(?:\\?|$)/.test(ref));
+          if (!refs.some((ref) => /\\.js(?:\\?|$)/.test(ref))) {
+            throw new Error('No deployed JavaScript bundle found in index.html');
+          }
+          for (const ref of refs) {
+            const response = await fetch(new URL(ref, pageUrl));
+            if (!response.ok) throw new Error(`Asset request failed: ${ref} (${response.status})`);
+          }
+          console.log(`Verified homepage, logo and ${refs.length} JS/CSS assets`);
+          NODE
