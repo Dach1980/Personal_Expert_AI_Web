@@ -27,7 +27,20 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
-        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_OIDC_ISSUER: ${{ vars.VITE_OIDC_ISSUER }}
+          VITE_OIDC_CLIENT_ID: ${{ vars.VITE_OIDC_CLIENT_ID }}
+          VITE_OIDC_REDIRECT_URI: ${{ vars.VITE_OIDC_REDIRECT_URI }}
+          VITE_DEMO_MODE: "false"
+        run: |
+          if [ -z "$VITE_API_BASE_URL" ]; then
+            echo "::warning::Repository variable VITE_API_BASE_URL is not configured; live API calls will remain unavailable."
+          fi
+          if [ -z "$VITE_OIDC_ISSUER" ]; then
+            echo "::warning::Repository variable VITE_OIDC_ISSUER is not configured; Keycloak login will remain unavailable."
+          fi
+          npm run build
       - name: Verify published branding assets
         run: |
           test -s dist/logo.svg
