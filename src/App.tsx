@@ -4,9 +4,10 @@ import { Sidebar } from './components/Sidebar';
 import { ProjectList } from './components/ProjectList';
 import { ChatPanel } from './components/ChatPanel';
 import { DocumentWorkspace } from './components/DocumentWorkspace';
+import { AdminAuditRoadmap } from './components/AdminAuditRoadmap';
 import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
-import type { ChatMessage, Conversation, MessageCitation, Project, Session } from './types';
+import type { ChatMessage, Conversation, MessageCitation, Project, Session, TenantMembership } from './types';
 
 const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true';
@@ -16,7 +17,7 @@ type Theme = 'light' | 'dark';
 
 function navFromPath(pathname: string): string {
   const segment = pathname.replace(/\/+$/, '').split('/').pop();
-  return segment === 'projects' || segment === 'knowledge' || segment === 'settings' ? segment : 'workspace';
+  return segment === 'projects' || segment === 'knowledge' || segment === 'settings' || segment === 'admin' ? segment : 'workspace';
 }
 
 export default function App() {
@@ -27,6 +28,9 @@ export default function App() {
     return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
   });
   const [session, setSession] = useState<Session | null>(null);
+  const [tenants, setTenants] = useState<TenantMembership[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [adminAccess, setAdminAccess] = useState(false);
   const [projects, setProjects] = useState<Project[]>(demoMode ? demoProjects : []);
   const [selectedId, setSelectedId] = useState<string | null>(demoMode ? demoProjects[0]?.id ?? null : null);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -97,8 +101,11 @@ export default function App() {
     try {
       await apiClient.initializeAuth();
       const currentSession = await apiClient.getSession();
-      setSession(currentSession);
       if (!currentSession.authenticated) {
+        setSession(currentSession);
+        setTenants([]);
+        setSelectedTenantId(null);
+        setAdminAccess(false);
         setProjects([]);
         setSelectedId(null);
         setConversationId(null);
@@ -107,12 +114,44 @@ export default function App() {
         setLoadState('ready');
         return;
       }
-      const availableProjects = await apiClient.getProjects();
+
+      let canAdmin = false;
+      try {
+        const admin = await apiClient.getAdminMe();
+        canAdmin = admin.permissions.includes('system.audit.read') || admin.permissions.includes('system.tenants.read');
+      } catch {
+        canAdmin = false;
+      }
+      setAdminAccess(canAdmin);
+
+      const availableTenants = await apiClient.getTenants();
+      setTenants(availableTenants);
+      const rememberedTenantId = window.localStorage.getItem('pea-selected-tenant');
+      const selected = availableTenants.find((tenant) => tenant.id === rememberedTenantId)?.id
+        ?? availableTenants[0]?.id
+        ?? null;
+      setSelectedTenantId(selected);
+      if (!selected) {
+        setSession({ ...currentSession, tenantId: null });
+        setProjects([]);
+        setSelectedId(null);
+        setConversationId(null);
+        setConversations([]);
+        setMessages([]);
+        setLoadState('ready');
+        return;
+      }
+
+      // localStorage stores only the preferred tenant UUID, never an access grant.
+      // PEA validates active membership again on every tenant-scoped request.
+      window.localStorage.setItem('pea-selected-tenant', selected);
+      setSession({ ...currentSession, tenantId: selected });
+      const availableProjects = await apiClient.getProjects(selected);
       setProjects(availableProjects);
       const firstProject = availableProjects[0] ?? null;
       setSelectedId(firstProject?.id ?? null);
-      if (firstProject && currentSession.tenantId) {
-        await loadProjectChat(currentSession.tenantId, firstProject);
+      if (firstProject) {
+        await loadProjectChat(selected, firstProject);
       } else {
         setConversationId(null);
         setConversations([]);
@@ -123,6 +162,9 @@ export default function App() {
       const message = cause instanceof Error ? cause.message : 'Не удалось подключиться к API Adapter.';
       if (message === 'Требуется авторизация.') {
         setSession({ authenticated: false });
+        setTenants([]);
+        setSelectedTenantId(null);
+        setAdminAccess(false);
         setProjects([]);
         setSelectedId(null);
         setConversationId(null);
@@ -132,6 +174,32 @@ export default function App() {
         return;
       }
       setError(message);
+      setLoadState('error');
+    }
+  };
+
+  const switchTenant = async (tenantId: string) => {
+    if (!tenants.some((tenant) => tenant.id === tenantId) || tenantId === selectedTenantId || sending) return;
+    setSelectedTenantId(tenantId);
+    window.localStorage.setItem('pea-selected-tenant', tenantId);
+    setSession((current) => current ? { ...current, tenantId } : current);
+    setProjects([]);
+    setSelectedId(null);
+    setConversationId(null);
+    setConversations([]);
+    setMessages([]);
+    setChatError(null);
+    setError(null);
+    setLoadState('loading');
+    try {
+      const availableProjects = await apiClient.getProjects(tenantId);
+      setProjects(availableProjects);
+      const firstProject = availableProjects[0] ?? null;
+      setSelectedId(firstProject?.id ?? null);
+      if (firstProject) await loadProjectChat(tenantId, firstProject);
+      setLoadState('ready');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Не удалось переключить tenant.');
       setLoadState('error');
     }
   };
@@ -240,11 +308,19 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar active={nav} onChange={navigate} />
+      <Sidebar active={nav} onChange={navigate} showAdmin={adminAccess} />
       <main className="main-area">
         <header className="topbar">
           <span>Рабочее пространство　/　<b>{activeProject?.name ?? 'Проекты'}</b></span>
           <div className="topbar-actions">
+            {session?.authenticated && tenants.length > 0 && (
+              <label className="tenant-switcher">
+                <span>Организация</span>
+                <select aria-label="Выбрать tenant" value={selectedTenantId ?? ''} disabled={sending || loadState === 'loading'} onChange={(event) => void switchTenant(event.target.value)}>
+                  {tenants.map((tenant) => <option key={tenant.id} value={tenant.id}>{tenant.name}</option>)}
+                </select>
+              </label>
+            )}
             {session?.authenticated && <span className="user-identity">{session.displayName ?? 'Пользователь'}</span>}
             <button
               className="theme-toggle"
@@ -264,8 +340,8 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">ЭКСПЕРТНАЯ СИСТЕМА · WORKSPACE</div>
-              <h1>{nav === 'workspace' ? 'Рабочее пространство' : nav === 'projects' ? 'Мои проекты' : nav === 'knowledge' ? 'База знаний' : 'Настройки'}</h1>
-              <p>Проекты, документация и интеллектуальный помощник — в одном пространстве.</p>
+              <h1>{nav === 'workspace' ? 'Рабочее пространство' : nav === 'projects' ? 'Мои проекты' : nav === 'knowledge' ? 'База знаний' : nav === 'admin' ? 'Аудит и Roadmap' : 'Настройки'}</h1>
+              <p>{nav === 'admin' ? 'Административные данные PEA и контроль этапов интеграции.' : 'Проекты, документация и интеллектуальный помощник — в одном пространстве.'}</p>
             </div>
           </div>
           <div className="stats-grid">
@@ -344,11 +420,17 @@ export default function App() {
                 />
               ) : (
                 <section className="panel connection-panel">
-                  <h2>Нет доступных проектов</h2>
-                  <p>Пользователю пока не назначены проекты в PEA.</p>
+                  <h2>{tenants.length === 0 ? 'Нет доступных организаций' : 'Нет доступных проектов'}</h2>
+                  <p>{tenants.length === 0 ? 'Для этой учётной записи нет активных членств в tenant. Обратитесь к администратору PEA.' : 'В выбранной организации пользователю пока не назначены проекты.'}</p>
                 </section>
               )}
             </div>
+          )}
+
+          {nav === 'admin' && adminAccess && <AdminAuditRoadmap />}
+
+          {nav === 'admin' && !adminAccess && (
+            <section className="panel connection-panel" role="alert"><h2>Доступ запрещён</h2><p>Для раздела требуются административные разрешения PEA system.audit.read и/или system.tenants.read.</p></section>
           )}
 
           {nav === 'settings' && (
