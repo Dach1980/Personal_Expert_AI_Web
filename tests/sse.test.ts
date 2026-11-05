@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCitationPayload, parseSseStream } from '../src/services/api/sse';
+import { normalizeSseEvent, parseCitationPayload, parseSseStream } from '../src/services/api/sse';
 
 function streamOf(...chunks: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -48,4 +48,21 @@ test('normalizes single, array and wrapped citation payloads', () => {
   assert.deepEqual(parseCitationPayload('{"title":"A"}'), [{ title: 'A' }]);
   assert.deepEqual(parseCitationPayload('[{"title":"A"},{"title":"B"}]'), [{ title: 'A' }, { title: 'B' }]);
   assert.deepEqual(parseCitationPayload('{"citations":[{"title":"A"}]}'), [{ title: 'A' }]);
+});
+
+test('normalizes the JSON envelope used by the PEA streaming API', () => {
+  assert.deepEqual(
+    normalizeSseEvent({
+      event: 'message',
+      data: '{"type":"text_delta","data":{"delta":"hello"}}',
+    }),
+    { type: 'text_delta', data: { delta: 'hello' } },
+  );
+  assert.deepEqual(
+    normalizeSseEvent({
+      event: 'message',
+      data: '{"type":"done","data":{}}',
+    }),
+    { type: 'done', data: {} },
+  );
 });
