@@ -36,6 +36,14 @@ test('preserves event id and ignores SSE comments', async () => {
   assert.deepEqual(events, [{ event: 'citation', data: '{"title":"Spec"}', id: '42' }]);
 });
 
+test('handles CRLF split across network chunks without dispatching early', async () => {
+  const events = [];
+  for await (const event of parseSseStream(streamOf('event: citation\r', '\ndata: {"title":"Spec"}\r', '\n\r', '\n'))) {
+    events.push(event);
+  }
+  assert.deepEqual(events, [{ event: 'citation', data: '{"title":"Spec"}' }]);
+});
+
 test('normalizes single, array and wrapped citation payloads', () => {
   assert.deepEqual(parseCitationPayload('{"title":"A"}'), [{ title: 'A' }]);
   assert.deepEqual(parseCitationPayload('[{"title":"A"},{"title":"B"}]'), [{ title: 'A' }, { title: 'B' }]);
