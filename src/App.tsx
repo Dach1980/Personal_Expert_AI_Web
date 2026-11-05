@@ -7,6 +7,7 @@ import { DocumentWorkspace } from './components/DocumentWorkspace';
 import { AdminAuditRoadmap } from './components/AdminAuditRoadmap';
 import { demoMessages, demoProjects } from './data/demo';
 import { apiClient } from './services/api/client';
+import { chooseTenantId } from './services/tenant-selection';
 import type { ChatMessage, Conversation, MessageCitation, Project, Session, TenantMembership } from './types';
 
 const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
@@ -127,9 +128,7 @@ export default function App() {
       const availableTenants = await apiClient.getTenants();
       setTenants(availableTenants);
       const rememberedTenantId = window.localStorage.getItem('pea-selected-tenant');
-      const selected = availableTenants.find((tenant) => tenant.id === rememberedTenantId)?.id
-        ?? availableTenants[0]?.id
-        ?? null;
+      const selected = chooseTenantId(availableTenants, rememberedTenantId);
       setSelectedTenantId(selected);
       if (!selected) {
         setSession({ ...currentSession, tenantId: null });
