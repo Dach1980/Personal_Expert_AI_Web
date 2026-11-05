@@ -4,7 +4,7 @@ export type SseEvent = {
   id?: string;
 };
 
-/** Parse an SSE response body, including CRLF, multiline data and the final unterminated frame. */
+/** Parse an SSE response body, including split CRLF, multiline data and the final unterminated frame. */
 export async function* parseSseStream(
   stream: ReadableStream<Uint8Array>,
 ): AsyncGenerator<SseEvent> {
@@ -20,7 +20,11 @@ export async function* parseSseStream(
       eventName = 'message';
       return null;
     }
-    const event: SseEvent = { event: eventName || 'message', data: dataLines.join('\n'), ...(eventId ? { id: eventId } : {}) };
+    const event: SseEvent = {
+      event: eventName || 'message',
+      data: dataLines.join('\n'),
+      ...(eventId ? { id: eventId } : {}),
+    };
     eventName = 'message';
     dataLines = [];
     return event;
@@ -39,26 +43,37 @@ export async function* parseSseStream(
     return null;
   };
 
+  const consumeCompleteLines = function* (final = false): Generator<SseEvent> {
+    // A CR at the end of a network chunk may be the first half of CRLF.
+    // Hold it until the next chunk so CRLF is treated as one line ending.
+    const holdTrailingCr = !final && buffer.endsWith('\r');
+    const source = holdTrailingCr ? buffer.slice(0, -1) : buffer;
+    const lines = source.split(/\r\n|\r|\n/);
+    buffer = lines.pop() ?? '';
+    if (holdTrailingCr) buffer += '\r';
+    for (const line of lines) {
+      const event = consumeLine(line);
+      if (event) yield event;
+    }
+    if (final && buffer) {
+      const finalLines = buffer.split(/\r\n|\r|\n/);
+      buffer = '';
+      for (const line of finalLines) {
+        const event = consumeLine(line);
+        if (event) yield event;
+      }
+    }
+  };
+
   try {
     while (true) {
       const { value, done } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(/\r\n|\r|\n/);
-      buffer = lines.pop() ?? '';
-      for (const line of lines) {
-        const event = consumeLine(line);
-        if (event) yield event;
-      }
+      yield* consumeCompleteLines();
     }
     buffer += decoder.decode();
-    if (buffer) {
-      const lines = buffer.split(/\r\n|\r|\n/);
-      for (const line of lines) {
-        const event = consumeLine(line);
-        if (event) yield event;
-      }
-    }
+    yield* consumeCompleteLines(true);
     const finalEvent = dispatch();
     if (finalEvent) yield finalEvent;
   } finally {
