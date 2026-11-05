@@ -109,4 +109,4 @@ CI and live runtime acceptance are different gates.
 
 ## Demo mode safety
 
-GitHub Pages defaults to `VITE_DEMO_MODE=true`. Demo projects, documents, audit events and administrative permissions are synthetic UI fixtures. They are not PEA records and must never be mixed with production API responses. The demo chat explicitly states that it does not call a model. Production mode is opt-in through the repository variable `VITE_DEMO_MODE=false`, only after the real Adapter and Keycloak settings are configured.
+GitHub Pages defaults to `VITE_DEMO_MODE=true`. Demo projects, documents, audit events and administrative permissions are synthetic UI fixtures. They are not PEA records and must never be mixed with production API responses. The demo chat explicitly states that it does not call a model. The workflow intentionally hardcodes `VITE_DEMO_MODE=true` until real Adapter and Keycloak settings are configured and live acceptance is complete. Production mode requires a deliberate workflow change, not an accidental repository variable.
