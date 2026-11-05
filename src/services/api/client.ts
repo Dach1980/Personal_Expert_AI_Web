@@ -1,7 +1,7 @@
 import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, MessageCitation, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
 import type { ExpertApi, SendMessageInput } from './types';
 import { beginLogin, endLoginSession, getAccessToken, initializeOidc } from './oidc';
-import { parseCitationPayload, parseSseStream } from './sse';
+import { normalizeSseEvent, parseCitationPayload, parseSseStream } from './sse';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 
@@ -153,30 +153,31 @@ export const apiClient: ExpertApi = {
       );
     }
 
-    for await (const event of parseSseStream(response.body)) {
-      if (event.event === 'error') {
-        let message = 'Ошибка локальной модели.';
-        try {
-          const parsed = JSON.parse(event.data) as { message?: string };
-          message = parsed.message ?? message;
-        } catch {
-          message = event.data || message;
-        }
-        throw new Error(message);
+    for await (const rawEvent of parseSseStream(response.body)) {
+      const event = normalizeSseEvent(rawEvent);
+      const data = event.data && typeof event.data === 'object'
+        ? event.data as Record<string, unknown>
+        : {};
+      if (event.type === 'error') {
+        throw new Error(typeof data.message === 'string' ? data.message : 'Ошибка локальной модели.');
       }
-      if (event.event === 'text_delta') {
-        const parsed = JSON.parse(event.data) as { delta?: string; text?: string };
-        const delta = parsed.delta ?? parsed.text;
+      if (event.type === 'text_delta') {
+        const delta = typeof data.delta === 'string'
+          ? data.delta
+          : typeof data.text === 'string'
+            ? data.text
+            : '';
         if (delta) yield delta;
         continue;
       }
-      if (event.event === 'citation' || event.event === 'citations') {
-        for (const citation of parseCitationPayload(event.data)) {
+      if (event.type === 'citation' || event.type === 'citations') {
+        const citationPayload = 'citations' in data ? data.citations : data;
+        const encoded = JSON.stringify(citationPayload);
+        for (const citation of parseCitationPayload(encoded)) {
           input.onCitation?.(citation as MessageCitation);
         }
       }
-      // message_start, message_end, usage and heartbeat events are valid
-      // protocol events; they do not add visible text to the assistant bubble.
+      // PEA currently emits done; future usage/meta/heartbeat events remain non-text.
     }
   },
 };
