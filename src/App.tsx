@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, FileText, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Activity, FileText, MessageSquare, ShieldCheck, Sun, Moon } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { ProjectList } from './components/ProjectList';
 import { ChatPanel } from './components/ChatPanel';
@@ -12,9 +12,20 @@ const logoUrl = `${import.meta.env.BASE_URL}logo.svg`;
 const demoMode = import.meta.env.VITE_DEMO_MODE === 'true';
 
 type LoadState = 'loading' | 'ready' | 'error';
+type Theme = 'light' | 'dark';
+
+function navFromPath(pathname: string): string {
+  const segment = pathname.replace(/\/+$/, '').split('/').pop();
+  return segment === 'projects' || segment === 'knowledge' || segment === 'settings' ? segment : 'workspace';
+}
 
 export default function App() {
-  const [nav, setNav] = useState('workspace');
+  const [nav, setNav] = useState(() => navFromPath(window.location.pathname));
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = window.localStorage.getItem('pea-theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  });
   const [session, setSession] = useState<Session | null>(null);
   const [projects, setProjects] = useState<Project[]>(demoMode ? demoProjects : []);
   const [selectedId, setSelectedId] = useState<string | null>(demoMode ? demoProjects[0]?.id ?? null : null);
@@ -89,6 +100,24 @@ export default function App() {
   useEffect(() => {
     if (!demoMode) void loadWorkspace();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('pea-theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    const syncRoute = () => setNav(navFromPath(window.location.pathname));
+    window.addEventListener('popstate', syncRoute);
+    return () => window.removeEventListener('popstate', syncRoute);
+  }, []);
+
+  const navigate = (nextNav: string) => {
+    setNav(nextNav);
+    const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const route = nextNav === 'workspace' ? '/' : `/${nextNav}`;
+    window.history.pushState({}, '', `${basePath}${route}`);
+  };
 
   const sendDemoMessage = (content: string) => {
     const now = new Date().toISOString();
@@ -172,12 +201,22 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <Sidebar active={nav} onChange={setNav} />
+      <Sidebar active={nav} onChange={navigate} />
       <main className="main-area">
         <header className="topbar">
           <span>Рабочее пространство　/　<b>{activeProject?.name ?? 'Проекты'}</b></span>
           <div className="topbar-actions">
             {session?.authenticated && <span className="user-identity">{session.displayName ?? 'Пользователь'}</span>}
+            <button
+              className="theme-toggle"
+              type="button"
+              onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
+              title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <span>{theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}</span>
+            </button>
             {!demoMode && session?.authenticated && <button className="text-button" onClick={() => apiClient.logout()}>Выйти</button>}
             <span className="environment">{demoMode ? '● DEMO MODE' : loadState === 'ready' ? '● API CLIENT' : '● CONNECTING'}</span>
           </div>
