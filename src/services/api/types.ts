@@ -1,4 +1,4 @@
-import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, MessageCitation, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
+import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, MessageCitation, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment, SystemAdminMe, SystemAuditEvent, TenantMembership, TenantRecord } from '../../types';
 
 export interface SendMessageInput {
   tenantId: string;
@@ -14,7 +14,11 @@ export interface ExpertApi {
   login(): Promise<void>;
   logout(): void;
   getSession(): Promise<Session>;
-  getProjects(): Promise<Project[]>;
+  getTenants(): Promise<TenantMembership[]>;
+  getProjects(tenantId: string): Promise<Project[]>;
+  getAdminMe(): Promise<SystemAdminMe>;
+  getAdminAuditEvents(): Promise<SystemAuditEvent[]>;
+  getAdminTenants(): Promise<TenantRecord[]>;
   getConversations(tenantId: string, projectId: string): Promise<Conversation[]>;
   createConversation(tenantId: string, projectId: string): Promise<Conversation>;
   getMessages(tenantId: string, projectId: string, conversationId: string): Promise<ChatMessage[]>;
