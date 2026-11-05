@@ -1,4 +1,4 @@
-import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
+import type { ChatMessage, Conversation, DocumentRecord, DocumentVersion, Evidence, Finding, MessageCitation, ProcessingArtifact, ProcessingRun, Project, Review, Session, SourceFragment } from '../../types';
 
 export interface SendMessageInput {
   tenantId: string;
@@ -6,6 +6,7 @@ export interface SendMessageInput {
   conversationId: string;
   content: string;
   signal?: AbortSignal;
+  onCitation?: (citation: MessageCitation) => void;
 }
 
 export interface ExpertApi {
