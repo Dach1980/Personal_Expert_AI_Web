@@ -1,59 +1,78 @@
-# Implementation status — 2026-11-05
+# Personal Expert AI Web — implementation status
 
-Обновление межрепозиторной реализации Personal Expert AI. Все изменения Web ниже внесены в `main`; текущий проверенный по истории Git commit на момент подготовки отчёта: `68e0060e58a5f5195d79acafe18f3e08933aa322`.
+Дата обновления: 2026-11-05  
+Текущий исходный HEAD до документационного commit: `9b94ad4799a7c2e9f5c95d2f2d52cf9a1351bff9`  
+Публичный frontend: https://dach1980.github.io/Personal_Expert_AI_Web/
 
-## Что изменено в этом проходе
+## Подтверждённая реализация в Web
 
-### Frontend baseline / Pages
-- Исправление logo asset остаётся в силе: `assets/` используется как Vite `publicDir`; Sidebar, footer и favicon используют `BASE_URL` + `logo.svg`.
-- Pages workflow проверяет logo в `dist` и после deploy запрашивает опубликованный `logo.svg` по HTTPS.
-- Build читает публичные GitHub repository Variables `VITE_API_BASE_URL`, `VITE_OIDC_ISSUER`, `VITE_OIDC_CLIENT_ID`, `VITE_OIDC_REDIRECT_URI`.
-- Workflow генерирует `package-lock.json`, если его ещё нет, устанавливает зависимости через `npm ci` и сохраняет созданный lockfile в `main` после успешной сборки.
-- Добавлен `npm test` и запуск тестов SSE в Pages CI.
-- Важно: GitHub connector не предоставил подтверждение результата нового Actions run. Поэтому build/deploy после этих изменений пока `NOT VERIFIED`; опубликованный logo smoke test тоже `NOT VERIFIED`.
+### Frontend baseline / GitHub Pages
+- React 18 + TypeScript + Vite.
+- Зафиксированный `package-lock.json`, CI использует `npm ci`.
+- GitHub Pages workflow выполняет frontend tests, TypeScript/Vite build, подготовку `dist/404.html`, проверку logo/JS/CSS и post-deploy smoke tests.
+- SPA routes: `/`, `/projects`, `/knowledge`, `/settings`; `popstate` синхронизирует Back/Forward.
+- Светлая/тёмная тема: системная тема при первом запуске, ручной выбор, сохранение в localStorage.
+- Подтверждённый успешный deployment до последних UX-изменений: [run 41960961373](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41960961373), commit `704ee545e7b3c6a6a08097a0d2b4b11c136772a5`.
+- Последний UX change set: `6e5dbce`, `16e065c`, `9b94ad4`. Его Pages workflows: [41961641314](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41961641314) и [41961641688](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41961641688). Результат необходимо считать подтверждённым только после завершения обоих runs.
 
-### OIDC lifecycle
-- ID token теперь проверяется криптографически по RS256/JWKS.
-- Проверяются issuer, audience, expiry и nonce.
-- Параллельные refresh-запросы объединяются в один in-flight refresh.
-- Access/refresh tokens остаются в памяти. После reload используется top-level `prompt=none` round-trip к Keycloak SSO вместо сохранения refresh token в browser storage.
-- Runtime E2E с реальным Keycloak, refresh-token rotation, logout/revocation, CSP и браузерными сценариями ещё не выполнен.
+### Identity / OIDC frontend
+- Authorization Code + PKCE S256.
+- RS256/JWKS ID token validation; issuer, audience, expiry, nonce.
+- Single-flight refresh; access/refresh tokens остаются в памяти.
+- После reload выполняется Keycloak SSO `prompt=none`, без сохранения bearer tokens в localStorage/sessionStorage.
+- Реальный Keycloak realm, redirect URI/origin, token rotation, logout/revocation, gateway header stripping и browser E2E не проверены.
 
-### Chat / SSE / citations
-- Добавлен отдельный SSE parser: CRLF, включая CRLF на границе сетевых chunks, multiline data, comments, id, final frame без завершающего пустого разделителя.
-- Добавлена нормализация payload `citation`/`citations` и типизация source metadata.
-- Chat UI показывает citation title, документ, страницу/лист и excerpt; внешние ссылки открываются только для HTTP(S) URL с `noopener noreferrer`.
-- Добавлены unit tests для framing и citation payload normalization; они подключены к CI.
-- Важное ограничение: PEA сейчас реально эмитит `text_delta`, `done`, `error`; backend citations ещё не эмитятся. Frontend умеет принимать `citation`/`citations`, но полноценные grounded citations появятся только после Bionic Agent Runtime tool и PEA provenance pipeline. Реальный поток и history persistence ещё не проверены E2E.
+### Workspace, projects, conversations
+- Загрузка проверенной сессии и доступных проектов через Bionic PEA Adapter.
+- Проект выбирается из серверного списка; проектные данные запрашиваются в tenant scope с backend ACL.
+- История диалогов загружается из API; добавлены список диалогов, переключение и создание нового диалога.
+- Переименование/архивирование диалогов пока не добавлены: соответствующие операции должны сначала существовать в API Adapter и PEA.
+- Чат использует SSE parser и отображает citations, если backend их присылает.
+- PEA сейчас эмитит текстовые delta/done/error; citations от retrieval ещё не формируются. UI прямо сообщает, что автоматического документного контекста пока нет.
 
-## Межрепозиторный статус
+### Documents / evidence
+- DocumentWorkspace содержит создание документа, multipart upload immutable versions, idempotency key, список версий, processing runs, SourceFragments, artifacts preview, Reviews/Findings/Evidence.
+- Это UI/API integration code; полноценный runtime E2E с реальным worker, storage и документами ещё не принят.
+- Knowledge route пока фактически открывает документный workspace; отдельный semantic Knowledge Base/Skills UX не завершён.
 
-| Gate | Состояние | Комментарий |
+### Settings
+- Добавлен рабочий экран локальных предпочтений темы.
+- Показывает read-only состояние сессии, пользователя, tenant context и наличие build-time API/OIDC config.
+- Backend provider/model/storage settings намеренно не редактируются из публичного браузера.
+- Tenant selection/switch отсутствует; один tenant context приходит в проверенной сессии.
+
+## UX audit — найденные незакрытые области
+
+1. Sidebar пока содержит только Workspace, Projects, Documents и Settings. Отдельные Dialogues, Reviews, Knowledge Base, Skills и Audit/Roadmap разделы отсутствуют.
+2. Projects list не имеет полного поиска/сортировки, project details и управления участниками.
+3. Chat имеет history selection/new conversation, но нет rename/archive/search, retry/cancel и явного состояния reconnect.
+4. Settings — только read-only overview и theme preference; нет профильных, notification, model/provider и infrastructure controls.
+5. Tenant/project switcher не реализован. Нельзя подменять это локальным select без серверной проверки membership.
+6. Admin Audit & Roadmap нельзя безопасно показывать по frontend-only флагу. Требуется PEA admin endpoint с серверной RBAC-проверкой, audit persistence и проверкой полномочий на каждом запросе.
+7. Document UI требует более явных upload/progress/retry/empty/error states и preview navigation по страницам/листам.
+8. Responsive layout и клавиатурная доступность требуют ручной browser acceptance на desktop/tablet/mobile.
+
+## Межрепозиторные интеграционные статусы
+
+| Gate | Статус | Что остаётся |
 |---|---|---|
-| 0. Frontend baseline | PARTIAL / CI NOT VERIFIED | Logo, env wiring, npm ci bootstrap и SSE tests добавлены; успешный Actions run не подтверждён |
-| 1. UX / navigation | NOT DONE | Целевая навигация Workspace, Projects, Documents, Dialogues, Reviews, Knowledge Base, Skills, Settings ещё не реализована полностью |
-| 2. OIDC / trusted gateway | PARTIAL | Browser OIDC усилен; реальный Keycloak и серверная независимая JWT validation остаются runtime gates |
-| 3. Tenant/project switching | NOT DONE | Нет завершённого tenant list/switch workflow; первый доступный проект выбирается автоматически |
-| 4. Conversation/SSE | PARTIAL | Parser и frontend citations готовы в исходниках; серверный event contract и runtime streaming не приняты |
-| 5. Document lifecycle | PARTIAL | UI и adapter routes существуют; реальная загрузка, worker, artifacts и ACL требуют E2E |
-| 6. PEA Retrieval Tool | NOT DONE | Не подтверждён PEA scoped search tool в Bionic Agent Runtime; ACL-before-prompt и grounded citations отсутствуют |
-| 7. Fork-specific Bionic image | NOT DONE | Deployment manifests всё ещё требуют fork-specific image build и проверку packaging; upstream image не является приемлемым |
-| 8. Runtime acceptance | BLOCKED | Нужна доступная среда с Docker/k3d, Keycloak, PostgreSQL, storage, PEA/Bionic и LM Studio |
+| Frontend CI / Pages | PARTIAL → awaiting latest runs | Подтвердить runs 41961641314 и 41961641688 |
+| UX/navigation | PARTIAL | Полные разделы, responsive acceptance, rename/archive, полноценные Settings |
+| OIDC | SOURCE IMPLEMENTED / RUNTIME BLOCKED | Реальный Keycloak, gateway trust boundary, token lifecycle E2E |
+| Tenant/project | PARTIAL | Tenant list/switch API, UI, membership and RLS negative tests |
+| Chat/SSE | PARTIAL | Cancel/retry/reconnect, citations emitted by retrieval, runtime tests |
+| Documents | SOURCE IMPLEMENTED / RUNTIME BLOCKED | Worker/storage/artifacts E2E, malformed/oversized/duplicate tests |
+| PEA Retrieval Tool | NOT IMPLEMENTED IN AGENT RUNTIME | Tool invocation, token propagation, ACL-before-prompt, citation allowlist |
+| Bionic fork image | NOT ACCEPTED | Fork-specific image build, manifest/digest and deployment test |
+| Integrated acceptance | BLOCKED | Shared Keycloak + PEA + Bionic + PostgreSQL/storage + LM Studio |
 
-## GitHub changes
+## Источники фактического статуса
 
-- OIDC lifecycle: `56625b399199cf27b929276f7047b4de1cac10b9`.
-- Pages config variables: `71d3dd8441d7d0e17e88fdcc51c6420a885f7a00`.
-- Remove fake `.invalid` values from `.env.example`: `487df37a7e0fec32497e849deec1726131db0666`.
-- Deployment configuration docs: `1d5678ccfdd29be3ebdd155ed2f26b4d6982d518`.
-- Manus handoff instructions: `62d6917367028dc83907878603337b92ef0a82dd`.
-- README status and docs links: `83b2c87bb92072049f159f57a7cb8ae8ee3d94ad`.
-- SSE parser, citations UI, tests and CI: latest Web commit `927770675edcf4c08efbaef56b15fd7afc6c0a2f`.
+- [Web latest source commits](https://github.com/Dach1980/Personal_Expert_AI_Web/commits/main/)
+- [Latest Web Pages workflows](https://github.com/Dach1980/Personal_Expert_AI_Web/actions)
+- [PEA implementation status](https://github.com/Dach1980/Personal_Expert_AI/blob/main/docs/development/IMPLEMENTATION_STATUS_2026-11-05.md)
+- [Bionic PEA Adapter contract](https://github.com/Dach1980/bionic-personal-expert-ai/blob/main/docs/integration/PEA_API_ADAPTER.md)
 
-## Manus handoff
+## Правило приёмки
 
-Use [MANUS_HANDOFF.md](MANUS_HANDOFF.md). Start with the read-only repository audit task. Do not ask Manus to generate a replacement app or move the canonical source away from this repository.
-
-## Acceptance rule
-
-CI green means source/build/test gates passed. It does not prove real OIDC, Bionic-to-PEA connectivity, tenant isolation in deployment, document processing, local model inference, or runtime retrieval. Mark each runtime gate `DONE` only with a reproducible test result and commit/deployment provenance.
+Source implementation, CI success and live runtime acceptance are separate statuses. Do not mark Keycloak, tenant switching, document processing, local inference or retrieval as runtime-ready without reproducible end-to-end evidence. No mock inference is accepted as LM Studio verification.
