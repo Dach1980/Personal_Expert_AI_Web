@@ -100,3 +100,24 @@ export function parseCitationPayload(data: string): MessageCitation[] {
   if ('citations' in parsed && Array.isArray(parsed.citations)) return parsed.citations;
   return [parsed as MessageCitation];
 }
+
+export type NormalizedSseEvent = {
+  type: string;
+  data: unknown;
+};
+
+/** Accept both named SSE events and the JSON { type, data } envelope emitted by PEA. */
+export function normalizeSseEvent(event: SseEvent): NormalizedSseEvent {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(event.data) as unknown;
+  } catch {
+    return { type: event.event, data: event.data };
+  }
+  if (parsed && typeof parsed === 'object' && 'type' in parsed &&
+      typeof (parsed as { type?: unknown }).type === 'string') {
+    const envelope = parsed as { type: string; data?: unknown };
+    return { type: envelope.type, data: envelope.data ?? {} };
+  }
+  return { type: event.event, data: parsed };
+}
