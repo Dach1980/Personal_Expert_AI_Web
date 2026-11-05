@@ -321,9 +321,10 @@ PostgreSQL       Document storage      Local model provider
 - [x] `package-lock.json` зафиксирован; CI использует `npm ci`.
 - [x] GitHub Pages build/deploy workflow проходит на baseline.
 - [x] Post-deploy smoke test проверяет homepage, logo и JS/CSS.
-- [ ] SPA fallback и прямые URL `/projects`, `/knowledge`, `/settings` должны быть опубликованы и проверены. Локальный Manus commit `b522b761dace46a3a81e183457b98a60cad990bf` не был отправлен из-за HTTP 403.
-- [ ] Подтвердить browser refresh на всех SPA routes после deployment.
-- [ ] Проверить сайт в реальном браузере после успешного Actions run.
+- [x] SPA fallback `dist/404.html` добавлен; Pages route smoke tests `/projects`, `/knowledge`, `/settings` прошли.
+- [x] GitHub Pages build/deploy на commit `ec01cdd9bac1f425a0587450ab7f51379707e19f` — SUCCESS ([run 41960861523](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41960861523)).
+- [x] URL-aware navigation и `popstate` обработчик реализованы.
+- [ ] Ручной browser refresh и проверка Back/Forward на production.
 
 Baseline runs: [41957689405](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41957689405), [41957819479](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41957819479), [41957819515](https://github.com/Dach1980/Personal_Expert_AI_Web/actions/runs/41957819515). Локальные тесты Manus для `b522b76` не считаются удалённой интеграцией.
 
@@ -331,7 +332,7 @@ Baseline runs: [41957689405](https://github.com/Dach1980/Personal_Expert_AI_Web/
 
 - [x] Базовые экраны Workspace, Projects, Knowledge/Documents, Settings.
 - [x] Адаптивная оболочка, Sidebar, project list, chat panel, document workspace.
-- [ ] Светлая/тёмная темы: переключатель, системный выбор по умолчанию, сохранение предпочтения.
+- [x] Светлая/тёмная темы: переключатель, системный выбор по умолчанию, сохранение предпочтения в localStorage.
 - [ ] Завершить UX всех экранов, состояния загрузки/ошибки/пустого списка, доступность и мобильную навигацию.
 - [ ] Полноценный Settings и защищённый Audit & Roadmap admin view (серверный RBAC), Reviews и пользовательские сценарии.
 
