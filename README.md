@@ -9,6 +9,8 @@
 ### Реализовано в коде
 - [x] React + TypeScript + Vite; Sidebar, ProjectList, ChatPanel и DocumentWorkspace.
 - [x] Адаптивное рабочее пространство и базовое переключение разделов.
+- [x] Переключатель светлой/тёмной темы с системным начальным выбором и сохранением предпочтения.
+- [x] SPA-навигация по URL и синхронизация с browser back/forward; production refresh проверяется CI.
 - [x] Типизированные модели пользователя, сессии, проектов, диалогов и документов.
 - [x] OIDC Authorization Code + PKCE S256 через public Keycloak client `pea-web`.
 - [x] Проверка ID token: RS256/JWKS, issuer, audience, expiry и nonce.
@@ -32,7 +34,7 @@
 - [ ] Завершить SSE citations/completion/error contract и проверку на реальном API.
 - [ ] Проверить upload → version → processing run → SourceFragment/artifact preview на реальных данных.
 - [ ] Провести E2E security tests: IDOR, cross-tenant/project, token leakage, XSS и CORS.
-- [ ] Подтвердить прямую перезагрузку SPA routes на production.
+- [ ] Подтвердить прямую перезагрузку SPA routes на production после публикации SPA fallback.
 - [ ] Реализовать PEA Retrieval Tool в Bionic Agent Runtime; grounded chat с citations ещё не готов.
 
 Наличие frontend-кода и успешной сборки не означает, что интеграция с живым Keycloak/Bionic/PEA уже принята. До успешного E2E приложение не считается сквозным рабочим прототипом.
