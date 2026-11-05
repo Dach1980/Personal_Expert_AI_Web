@@ -348,8 +348,8 @@ export default function App() {
           <div className="stats-grid">
             {[
               [Activity, 'ПРОЕКТЫ', demoMode ? String(projectCount) : loadState === 'ready' ? String(projectCount) : '—', demoMode ? 'Демонстрационные записи' : 'Данные API Adapter'],
-              [FileText, 'ДОКУМЕНТЫ', '—', 'Подключение document workspace — следующий этап'],
-              [MessageSquare, 'ДИАЛОГИ', conversationId ? '1' : '—', 'История диалогов PEA'],
+              [FileText, 'ДОКУМЕНТЫ', demoMode ? '3' : '—', demoMode ? 'Демонстрационные записи' : 'Документный workspace PEA'],
+              [MessageSquare, 'ДИАЛОГИ', demoMode ? '1' : conversationId ? '1' : '—', demoMode ? 'Демонстрационный пример' : 'История диалогов PEA'],
               [ShieldCheck, 'ДОСТУП', identityLabel, demoMode ? 'Права не проверяются' : 'Сессия проверяется backend'],
             ].map(([Icon, label, value, note], index) => {
               const ItemIcon = Icon as typeof Activity;
