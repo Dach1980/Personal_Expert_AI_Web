@@ -6,6 +6,18 @@ export interface Project {
   code: string | null;
   status?: string;
 }
+export interface MessageCitation {
+  id?: string;
+  title?: string;
+  document_title?: string;
+  source_fragment_id?: string;
+  document_version_id?: string;
+  page?: number;
+  sheet?: string;
+  excerpt?: string;
+  url?: string;
+  locator?: Record<string, unknown>;
+}
 export interface ChatMessage {
   id: string;
   conversation_id?: string;
@@ -14,6 +26,7 @@ export interface ChatMessage {
   model?: string | null;
   createdAt: string;
   created_at?: string;
+  citations?: MessageCitation[];
 }
 export interface Conversation {
   id: string;
