@@ -41,7 +41,37 @@ export interface Session {
   authenticated: boolean;
   userId?: string;
   displayName?: string;
-  tenantId?: string;
+  tenantId?: string | null;
+}
+
+export interface TenantMembership {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface SystemAdminMe {
+  user_id: string;
+  permissions: string[];
+}
+
+export interface SystemAuditEvent {
+  id: string;
+  actor_user_id: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  tenant_id: string | null;
+  request_id: string | null;
+  outcome: 'success' | 'denied' | 'failure' | string;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface TenantRecord {
+  id: string;
+  name: string;
+  status: string;
 }
 
 export interface DocumentRecord {
