@@ -22,7 +22,8 @@
 - [x] Document workspace: список/создание документов, загрузка immutable versions, enqueue processing, статусы, SourceFragments и artifacts.
 - [x] Просмотр artifact content и отображение Reviews / Findings / Evidence.
 - [x] Bearer access token передаётся только в Authorization header; fetch credentials выключены.
-- [x] Явный demo mode через `VITE_DEMO_MODE=true`.
+- [x] Публичный GitHub Pages по умолчанию собирается в безопасном demo mode (`VITE_DEMO_MODE=true`); режим production можно включить явной repository variable `VITE_DEMO_MODE=false` после настройки реального HTTPS Adapter и Keycloak.
+- [x] Demo mode содержит демонстрационные проекты, чат с честным предупреждением об отсутствии inference, библиотеку демонстрационных документов и отдельный demo-only экран Audit & Roadmap. Демоданные не являются реальными документами, пользователями, правами или событиями аудита.
 - [x] GitHub Pages workflow читает публичные конфигурационные параметры из GitHub repository Variables.
 - [x] Workflow проверяет logo.svg в build artifact и опубликованном Pages URL.
 
