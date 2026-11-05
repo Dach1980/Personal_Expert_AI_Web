@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowUp, Bot, Paperclip, Sparkles } from 'lucide-react';
-import type { ChatMessage, Project } from '../types';
+import type { ChatMessage, Conversation, Project } from '../types';
 
 export function ChatPanel({
   project,
@@ -8,12 +8,20 @@ export function ChatPanel({
   onSend,
   sending = false,
   error,
+  conversations = [],
+  activeConversationId,
+  onSelectConversation,
+  onNewConversation,
 }: {
   project: Project;
   messages: ChatMessage[];
   onSend: (content: string) => void;
   sending?: boolean;
   error?: string | null;
+  conversations?: Conversation[];
+  activeConversationId?: string | null;
+  onSelectConversation?: (id: string) => void;
+  onNewConversation?: () => void;
 }) {
   const [draft, setDraft] = useState('');
   const submit = () => {
@@ -32,7 +40,24 @@ export function ChatPanel({
           <h2>Экспертный помощник</h2>
           <p>Контекст: <b>{project.name}</b></p>
         </div>
-        <span className="environment">{sending ? '● ОТВЕЧАЕТ' : '● ЛОКАЛЬНЫЙ API'}</span>
+        <div className="chat-toolbar">
+          {onSelectConversation && conversations.length > 0 && (
+            <select
+              aria-label="Выбрать диалог"
+              value={activeConversationId ?? ''}
+              onChange={(event) => onSelectConversation(event.target.value)}
+              disabled={sending}
+            >
+              {conversations.map((conversation) => (
+                <option key={conversation.id} value={conversation.id}>
+                  {conversation.title || 'Без названия'}
+                </option>
+              ))}
+            </select>
+          )}
+          {onNewConversation && <button className="secondary-button compact-button" onClick={onNewConversation} disabled={sending}>Новый диалог</button>}
+          <span className="environment">{sending ? '● ОТВЕЧАЕТ' : '● ЛОКАЛЬНЫЙ API'}</span>
+        </div>
       </header>
       <div className="messages" aria-live="polite">
         {messages.map((message) => (
