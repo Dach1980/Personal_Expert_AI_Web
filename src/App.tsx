@@ -181,9 +181,8 @@ export default function App() {
 
   const switchTenant = async (tenantId: string) => {
     if (!tenants.some((tenant) => tenant.id === tenantId) || tenantId === selectedTenantId || sending) return;
-    setSelectedTenantId(tenantId);
-    window.localStorage.setItem('pea-selected-tenant', tenantId);
-    setSession((current) => current ? { ...current, tenantId } : current);
+    // Keep the current tenant as the committed selection until PEA accepts the
+    // requested context and its project/chat data has loaded successfully.
     setProjects([]);
     setSelectedId(null);
     setConversationId(null);
@@ -194,12 +193,22 @@ export default function App() {
     setLoadState('loading');
     try {
       const availableProjects = await apiClient.getProjects(tenantId);
-      setProjects(availableProjects);
       const firstProject = availableProjects[0] ?? null;
-      setSelectedId(firstProject?.id ?? null);
       if (firstProject) await loadProjectChat(tenantId, firstProject);
+      setProjects(availableProjects);
+      setSelectedId(firstProject?.id ?? null);
+      setSelectedTenantId(tenantId);
+      window.localStorage.setItem('pea-selected-tenant', tenantId);
+      setSession((current) => current ? { ...current, tenantId } : current);
       setLoadState('ready');
     } catch (cause) {
+      // Fail closed: never leave the browser claiming that an unauthorized
+      // tenant is active or persist it as the next preferred tenant.
+      setProjects([]);
+      setSelectedId(null);
+      setConversationId(null);
+      setConversations([]);
+      setMessages([]);
       setError(cause instanceof Error ? cause.message : 'Не удалось переключить tenant.');
       setLoadState('error');
     }
