@@ -3,11 +3,15 @@ import { apiClient } from '../services/api/client';
 import type { SystemAdminMe, SystemAuditEvent, TenantRecord } from '../types';
 
 const roadmap = [
-  { title: 'PEA: tenant identity и изоляция', status: 'Реализовано в исходниках; актуальный CI требует приёмки' },
-  { title: 'Web: выбор tenant и сброс контекста', status: 'Подключено к API; требуется browser E2E' },
-  { title: 'Аудит и административные права', status: 'Чтение через PEA RBAC API; требуется начальная выдача admin grants' },
-  { title: 'Bionic: доверенный PEA Adapter', status: 'Tenant context и admin proxy добавлены; требуется Rust CI' },
-  { title: 'Keycloak → Web → PEA → Bionic → PostgreSQL', status: 'Сквозная runtime-приёмка не выполнена' },
+  { title: 'Локальная среда Windows / WSL2', status: 'Выполнено: Docker Desktop, PostgreSQL 16 healthy, LM Studio доступна из Ubuntu, uv установлен. Python 3.12 и .venv — следующий шаг.' },
+  { title: 'Python 3.12 и зависимости PEA', status: 'Следующий этап: создать воспроизводимое .venv через uv, установить database / processing / llm / dev extras.' },
+  { title: 'PostgreSQL schema и миграции', status: 'Контейнер готов; Alembic upgrade, schema parity и локальные RLS / tenant isolation tests ещё не запускались.' },
+  { title: 'Локальный PEA API + LM Studio', status: 'Ожидает Python environment и миграций; затем health check, русский chat completion и streaming через локальную модель.' },
+  { title: 'Document ingestion и SourceFragments', status: 'Код pipeline существует; требуется локальный upload → immutable version → worker → fragments / artifacts E2E.' },
+  { title: 'Keycloak, trusted Bionic Adapter и Admin RBAC', status: 'Исходники и API-контракты существуют; live realm, grants, browser login и trusted gateway ещё не приняты.' },
+  { title: 'Tenant/project switching и изоляция', status: 'Нужны два тестовых tenant/project, browser/API negative tests и подтверждение RLS на локальном runtime.' },
+  { title: 'Interactive pea_search и citations', status: 'Блокирующий пробел: scheduled retrieval не заменяет conversation-scoped tool для обычного чата.' },
+  { title: 'Полная функциональная приёмка', status: 'Login → tenant → project → upload → processing → local model → retrieval → проверяемые citations; пока не выполнено.' },
 ];
 
 export function AdminAuditRoadmap() {
@@ -86,10 +90,11 @@ export function AdminAuditRoadmap() {
       </section>
 
       <section className="panel admin-panel admin-wide">
-        <div className="panel-heading"><div><h2>Roadmap интеграции</h2><p>Текущий инженерный статус; CI и runtime acceptance учитываются отдельно.</p></div></div>
+        <div className="panel-heading"><div><h2>Roadmap Personal Expert AI</h2><p>План учитывает фактический статус локального стенда, CI и отдельные runtime gates.</p></div></div>
         <div className="admin-list">{roadmap.map((item, index) => (
           <div className="admin-row roadmap-row" key={item.title}><span><b>{index + 1}. {item.title}</b><small>{item.status}</small></span></div>
         ))}</div>
+        <p className="muted"><a href="https://github.com/Dach1980/Personal_Expert_AI_Web/blob/main/docs/ADMIN_ROADMAP_2026-11-07.md" target="_blank" rel="noreferrer">Подробный roadmap и критерии приёмки</a></p>
       </section>
     </div>
   );
