@@ -399,3 +399,18 @@ Baseline runs: [41957689405](https://github.com/Dach1980/Personal_Expert_AI_Web/
 6. Выполнить Keycloak gateway runtime acceptance.
 7. Реализовать PEA Agent Runtime tool и grounded citations.
 8. Собрать fork-specific Bionic image и пройти сквозные E2E/security tests.
+
+
+---
+
+## Runtime checkpoint — 2026-11-08
+
+The operational evidence and next-day execution plan are maintained in [ADMIN_ROADMAP_2026-11-07.md](ADMIN_ROADMAP_2026-11-07.md), section 5. This checkpoint supersedes earlier statements that Keycloak was not ready.
+
+**Verified:** k3d cluster and operators are healthy; CNPG Keycloak database is healthy; Keycloak realm `stack-app`, OIDC discovery and JWKS are working; PEA API is reachable from the k3d server container; Keycloak issues a `pea-bionic-worker` client-credentials token whose RS256 signature, issuer, audience and scope have been verified.
+
+**Not yet accepted:** PEA workload authorization for that token; Kubernetes Worker Secret; corrected dev Stack manifest (stale `bionic-gpt` URLs remain); Bionic deployment; Bionic pod network access to PEA/LM Studio; browser login and tenant membership enforcement; document processing and local inference; interactive conversation-scoped `pea_search`; working Memory Engine.
+
+**Next execution date: 2026-11-09.** Verify PEA workload authorization, provision the Worker Secret without exposing it, correct and validate the Stack dev manifest, verify pod network paths, then deploy Bionic only if all gates pass. Follow with browser/OIDC smoke tests and the first local document-processing/inference scenario. Interactive `pea_search` remains the next functional milestone; Hermes-inspired Memory Engine MVP follows it.
+
+The PEA PostgreSQL database/volume must remain separate and untouched. Never delete the k3d cluster, run the destructive local dev-init script, expose secrets, or deploy around failed validation/security gates.
