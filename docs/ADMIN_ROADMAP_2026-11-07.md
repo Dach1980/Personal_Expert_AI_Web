@@ -1,6 +1,6 @@
 # Personal Expert AI — operational roadmap and local workstation status
 
-**Updated:** 2026-11-07  
+**Updated:** 2026-11-08  
 **Primary execution branch:** `main`  
 **Backend:** [Personal_Expert_AI](https://github.com/Dach1980/Personal_Expert_AI)  
 **Web/Admin:** [Personal_Expert_AI_Web](https://github.com/Dach1980/Personal_Expert_AI_Web)  
@@ -221,3 +221,61 @@ kubectl get events -n keycloak --sort-by=.lastTimestamp
 - Skills — версионируемые процедуры/инструменты с разрешениями; skill не может расширять права пользователя или обходить PEA ACL.
 
 **Правило приёмки:** наличие схемы, таблицы, UI или документации не считается работающей памятью. MVP принимается только после теста: сохранить воспоминание в одном диалоге → открыть новый диалог → автоматически извлечь его → применить в ответе; параллельно доказать отсутствие доступа из другого tenant/project/user.
+
+
+---
+
+## 5. Runtime status and next work — 2026-11-08 (supersedes the earlier resume point)
+
+This section records the verified state at the end of 2026-11-08. Earlier observations in section 4 are historical and must not be treated as the current state.
+
+### 5.1 Verified as completed
+
+| Area | Verified state |
+|---|---|
+| k3d | Cluster `k3d-bionic` exists; server and agent nodes are Ready. |
+| Ingress | Traefik is reachable on host port `30000`; the separate `pea-keycloak-ingress` serves Keycloak. |
+| Stack operators | CNPG, Keycloak and Stack operators are Running/Ready. |
+| Keycloak database | CNPG cluster `keycloak-db-cluster` is healthy; PostgreSQL pod is Running; 10 GiB PVC is Bound. |
+| Keycloak | Pod is Ready; realm `stack-app` is active. The old expected realm `bionic-gpt` does not exist. |
+| OIDC discovery/JWKS | Discovery document and JWKS endpoints under `http://localhost:30000/realms/stack-app` return HTTP 200. |
+| PEA clients/scopes | `pea-api` audience, `pea-api-context` scope, confidential `pea-bionic-worker`, public `pea-web`; context scope attached to Bionic OIDC client `stack-app` and worker. |
+| PEA reachability | PEA API `/health` returns HTTP 200 locally and from the k3d server container via `host.docker.internal:8000`. |
+| Worker token | Keycloak issues a client-credentials token for `pea-bionic-worker`; RS256 signature, issuer, audience `pea-api`, expiration and scope were successfully verified against JWKS. Token and secret were not printed or committed. |
+| Port-forward cleanup | Temporary Keycloak port-forward on host port `18080` was stopped; PID 5448 is no longer running. |
+
+### 5.2 Not yet accepted / remaining gaps
+
+- PEA workload authorization has **not** yet been verified end-to-end: prove that the PEA API accepts the Worker token on the intended workload/delegation endpoint and enforces instance, scope and grant restrictions.
+- The Worker client secret has not yet been installed as a Kubernetes Secret for Bionic. Do not print it, place it in Git, or put it in command-line arguments/history.
+- `infra-as-code/stack.yaml` still contains stale `bionic-gpt` realm paths in the dev profile. Align issuer, JWKS, token and logout URLs with the verified `stack-app` realm before deployment.
+- Bionic Stack has **not** been deployed. Do not report the Bionic application as running.
+- Bionic pod-to-PEA and pod-to-LM Studio networking still require runtime verification.
+- Browser login/logout, trusted gateway token forwarding, PEA membership authorization and tenant/project isolation are not yet accepted.
+- Document upload/worker processing, local inference from Bionic and grounded document answers are not yet accepted.
+- Normal interactive chat still lacks a proven conversation-scoped PEA retrieval flow. Scheduled retrieval does not satisfy this requirement.
+- Hermes-inspired Memory Engine is not implemented as a working write/retrieve/reuse pipeline; schema and design documents alone are not acceptance evidence.
+
+### 5.3 Plan for 2026-11-09
+
+Execute in this order, keeping all repository changes on `main` and preserving the separate PEA PostgreSQL database/volume.
+
+1. **Verify PEA workload authorization.** Inspect the actual auth/delegation implementation and tests, then call the intended endpoint with a freshly issued Worker token. Confirm both positive access and rejection of wrong issuer/audience/client/scope/instance or missing grant. Do not infer authorization from successful JWT signature verification alone.
+2. **Prepare the Worker credential safely.** Retrieve/rotate the Keycloak client secret only through a non-printing flow and create/update the Kubernetes Secret expected by the deployment. Never expose secret values in terminal output, Git, screenshots or logs.
+3. **Correct and validate the Stack dev manifest.** Replace stale `bionic-gpt` references with the verified `stack-app` issuer and endpoints; check every required secret, image reference, service URL and profile setting. Use the validation command supported by the installed Stack CLI/version; do not run deployment until validation and prerequisites pass.
+4. **Recheck network paths.** Confirm Keycloak service discovery, PEA API access from the cluster, and determine a working, explicit route from Bionic pods to LM Studio. Do not assume the WSL gateway address is reachable from pods.
+5. **Deploy Bionic only after gates 1–4 pass.** Run the dev deployment without deleting/recreating the cluster or touching the PEA PostgreSQL volume. If a gate fails, stop and fix that specific blocker rather than bypassing it.
+6. **Runtime smoke and identity acceptance.** Verify Bionic pods/services, browser login/logout, issuer/JWKS/audience validation, trusted gateway stripping of client-supplied `X-Forwarded-Access-Token`, and PEA membership enforcement.
+7. **First integrated document/inference scenario.** Upload a harmless test document, confirm immutable version and processing/SourceFragments, then verify a local LM Studio inference request with no cloud fallback. Record what is genuinely accepted and what remains blocked.
+8. **Prepare the next functional milestone.** After the base Bionic↔PEA path is accepted, implement conversation-scoped interactive `pea_search`: context and project scope must be server-derived, ACL filtering must happen before prompt construction, and citations must resolve to immutable source fragments.
+9. **Keep Memory Engine after interactive retrieval.** Start the PEA-owned Hermes-inspired Memory Engine MVP after interactive `pea_search`; do not conflate it with document retrieval.
+
+### 5.4 Safety and acceptance constraints
+
+- Do not run `.agents/skills/k3d-environment/dev-init.sh`, do not delete the `k3d-bionic` cluster, and do not run destructive Docker volume commands.
+- Do not rerun `stack init` or execute `stack deploy` before manifest, secrets, identity and network prerequisites are verified.
+- Do not run `bootstrap_initial_workspace.py`; the PEA database is already populated.
+- Do not expose PEA PostgreSQL to Bionic and do not modify its Docker volume.
+- Do not trust tenant/project IDs or `X-Forwarded-Access-Token` supplied by the browser/model. Bionic must strip client-supplied forwarded identity and inject only verified identity.
+- Keep secrets, tokens, private documents and local database content out of Git and logs.
+- Distinguish source implementation, cryptographic token verification, API authorization, and complete browser/runtime acceptance as separate evidence levels.
