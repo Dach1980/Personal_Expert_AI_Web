@@ -155,13 +155,69 @@ Run complete browser E2E:
 
 ## 4. Resume point
 
-The next hands-on session starts at **Gate 1** in Ubuntu:
+**Актуальная точка продолжения: 2026-11-08, локальный стенд Windows 11 + WSL2.** Более ранняя последовательность Gate 1 ниже по смыслу заменена текущим статусом.
+
+### Что подтверждено на 2026-11-08
+
+- k3d cluster `k3d-bionic` создан; server и agent nodes находятся в Ready.
+- Traefik, CoreDNS и local-path provisioner работают.
+- `stack init --install-keycloak` установил CNPG, Keycloak и Stack operators; все три deployment были проверены как 1/1 Ready.
+- Keycloak PostgreSQL PVC `keycloak-db-cluster-1` имеет статус Bound, объём 10 GiB.
+- CNPG cluster `keycloak-db-cluster` ещё находился в состоянии `Setting up primary`.
+- Pod `keycloak-0` был Running, но Ready 0/1 и имел 3 перезапуска. Сам Keycloak пока не принят.
+- Stack Operator был Ready 1/1.
+- PEA PostgreSQL — отдельная система; его volume и БД не подключаются к Bionic Stack и не должны затрагиваться.
+
+### Текущий следующий шаг — диагностика Keycloak
+
+Не повторять `stack init` и пока не выполнять `stack deploy`. Сначала в Ubuntu/WSL проверить причину перезапусков и готовность CNPG:
 
 ```bash
-cd /mnt/d/Projects/Personal_Expert_AI
-source "$HOME/.local/bin/env"
-uv --version
-docker compose ps
+echo "=== KEYCLOAK POD ==="
+kubectl describe pod -n keycloak keycloak-0
+
+echo
+echo "=== KEYCLOAK CURRENT LOG ==="
+kubectl logs -n keycloak keycloak-0 --tail=100
+
+echo
+echo "=== KEYCLOAK PREVIOUS LOG ==="
+kubectl logs -n keycloak keycloak-0 --previous --tail=100
+
+echo
+echo "=== CNPG CLUSTER ==="
+kubectl describe cluster.postgresql.cnpg.io -n keycloak keycloak-db-cluster
+
+echo
+echo "=== CNPG INIT LOG ==="
+kubectl logs -n keycloak keycloak-db-cluster-1-initdb-pwsfl --all-containers --tail=100
+
+echo
+echo "=== RECENT EVENTS ==="
+kubectl get events -n keycloak --sort-by=.lastTimestamp
 ```
 
-Then install Python 3.12 through uv and create the project's `.venv`. PostgreSQL is already running and healthy unless it was stopped before shutdown.
+Если имя init pod изменилось, сначала получить актуальное имя командой `kubectl get pods -n keycloak`. Логи и describe выводы проверить на наличие секретов до публикации; пароли, tokens и Secret data не копировать.
+
+**Gate текущего этапа:** CNPG cluster показывает Ready, PostgreSQL pod Ready, Keycloak pod Ready, Stack Operator Ready. Только после этого проверить OIDC discovery/issuer и фактические service endpoints.
+
+### Дальнейшая утверждённая последовательность
+
+1. Развернуть Bionic Stack из `infra-as-code/stack.yaml` с профилем `dev`, предварительно проверив manifest, image references, секреты и внешние зависимости. Не запускать `dev-init.sh` и не удалять кластер.
+2. Принять runtime цепочку Keycloak → Web → Bionic → PEA: реальный issuer из OIDC discovery, JWKS, audience, client scopes, существующая PEA identity и server-side tenant membership. Не передавать недоверенный `X-Forwarded-Access-Token`.
+3. Проверить Bionic pod → PEA API и LM Studio; адреса WSL host gateway не считать автоматически доступными из k3d. Проверить загрузку/обработку документа и локальный inference.
+4. Завершить интерактивный `pea_search`: conversation-scoped контекст создаётся сервером для аутентифицированного пользователя и проекта; модель не выбирает tenant/project authority; ACL проверяется до prompt; citations имеют allowlist и immutable provenance.
+5. **Сразу после interactive pea_search начать PEA-owned Hermes-inspired Memory Engine MVP.** MVP включает эпизодическую, долговременную и проектную память, provenance, извлечение/сохранение полезных воспоминаний и повторное использование в новом диалоге.
+6. После MVP реализовать Skills и управление памятью: версии, области действия, retention/deletion/forgetting, подтверждение важных фактов, audit trail, защита от prompt injection и изоляция user/tenant/project.
+7. Выполнить сквозную browser E2E и security acceptance: login → tenant → project → upload → processing → interactive retrieval → local Qwen → grounded citations; затем негативные проверки изоляции.
+
+### Архитектурные решения по памяти
+
+- Memory Engine принадлежит **PEA**, не Bionic. Bionic остаётся заменяемым Agent Runtime/UI.
+- Существующая таблица `memory_entries` и документ `MEMORY_ENGINE.md` — исходная база для аудита, но сами по себе не доказывают наличие работающего memory retrieval.
+- Разделять conversation context, episodic memory, long-term/user memory и project memory; не смешивать их с исходным документным retrieval.
+- Для каждой записи хранить scope, provenance/source, ownership и lifecycle metadata.
+- Извлечение памяти должно учитывать ACL до добавления воспоминаний в prompt; запрещено межпользовательское и межпроектное смешивание.
+- Skills — версионируемые процедуры/инструменты с разрешениями; skill не может расширять права пользователя или обходить PEA ACL.
+
+**Правило приёмки:** наличие схемы, таблицы, UI или документации не считается работающей памятью. MVP принимается только после теста: сохранить воспоминание в одном диалоге → открыть новый диалог → автоматически извлечь его → применить в ответе; параллельно доказать отсутствие доступа из другого tenant/project/user.
