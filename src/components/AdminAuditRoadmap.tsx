@@ -3,15 +3,17 @@ import { apiClient } from '../services/api/client';
 import type { SystemAdminMe, SystemAuditEvent, TenantRecord } from '../types';
 
 const roadmap = [
-  { title: 'Локальная среда Windows / WSL2', status: 'Выполнено: Docker Desktop, PostgreSQL 16 healthy, LM Studio доступна из Ubuntu, uv установлен. Python 3.12 и .venv — следующий шаг.' },
-  { title: 'Python 3.12 и зависимости PEA', status: 'Следующий этап: создать воспроизводимое .venv через uv, установить database / processing / llm / dev extras.' },
-  { title: 'PostgreSQL schema и миграции', status: 'Контейнер готов; Alembic upgrade, schema parity и локальные RLS / tenant isolation tests ещё не запускались.' },
-  { title: 'Локальный PEA API + LM Studio', status: 'Ожидает Python environment и миграций; затем health check, русский chat completion и streaming через локальную модель.' },
-  { title: 'Document ingestion и SourceFragments', status: 'Код pipeline существует; требуется локальный upload → immutable version → worker → fragments / artifacts E2E.' },
-  { title: 'Keycloak, trusted Bionic Adapter и Admin RBAC', status: 'Исходники и API-контракты существуют; live realm, grants, browser login и trusted gateway ещё не приняты.' },
-  { title: 'Tenant/project switching и изоляция', status: 'Нужны два тестовых tenant/project, browser/API negative tests и подтверждение RLS на локальном runtime.' },
-  { title: 'Interactive pea_search и citations', status: 'Блокирующий пробел: scheduled retrieval не заменяет conversation-scoped tool для обычного чата.' },
-  { title: 'Полная функциональная приёмка', status: 'Login → tenant → project → upload → processing → local model → retrieval → проверяемые citations; пока не выполнено.' },
+  { title: "Локальная среда Windows / WSL2 и PEA", status: "Базовая среда подготовлена; PostgreSQL 16, 15 Alembic migrations, RLS и тесты backend проверялись ранее. После перезапуска требуется подтвердить API и LM Studio runtime." },
+  { title: "k3d Kubernetes для Bionic", status: "Выполнено 2026-11-08: кластер k3d-bionic создан; узлы Ready; Traefik и local-path provisioner работают." },
+  { title: "Stack / CNPG / Keycloak Operators", status: "Stack init выполнен до создания Keycloak; CNPG Operator 1/1, Keycloak Operator 1/1, Stack Operator 1/1. Keycloak DB ещё настраивает primary." },
+  { title: "Keycloak и его PostgreSQL", status: "PVC базы Bound (10 GiB); CNPG Cluster в состоянии Setting up primary. Keycloak pod Running, но 0/1 и перезапускался. Требуется диагностика до Stack deploy." },
+  { title: "Развёртывание Bionic Stack", status: "Ожидает полной готовности Keycloak и проверки dev manifest, image references, секретов и сетевых зависимостей." },
+  { title: "PEA ↔ Bionic: OIDC и trusted adapter", status: "Требуется runtime-проверка Keycloak → Web → Bionic → PEA; issuer/JWKS берутся из реального OIDC discovery, токены и tenant scope проверяются сервером." },
+  { title: "Документы и локальный inference", status: "Проверить upload → immutable version → worker → SourceFragments и доступ Bionic pod к PEA API и LM Studio/Qwen без cloud fallback." },
+  { title: "Interactive pea_search и citations", status: "Обязательный следующий функциональный этап после запуска и проверки базовой связки: обычный интерактивный диалог должен получать conversation-scoped PEA retrieval context; scheduled retrieval недостаточен." },
+  { title: "Hermes-inspired PEA Memory Engine MVP", status: "Запланировано сразу после interactive pea_search: PEA-owned episodic, long-term и project memory; provenance, автоматическое извлечение, хранение и повторное использование воспоминаний в новых диалогах." },
+  { title: "Memory governance и Skills", status: "Следующий этап после MVP: versioned Skills, подтверждение важных фактов, scopes/retention/deletion, забывание, audit trail и строгая tenant/project/user isolation." },
+  { title: "Полная функциональная и security-приёмка", status: "Login → tenant → project → upload → processing → interactive retrieval → локальный Qwen → grounded citations; затем negative security tests и проверка изоляции." },
 ];
 
 export function AdminAuditRoadmap() {
