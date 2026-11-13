@@ -518,3 +518,20 @@ Security note: the runner account has Docker access to inspect and execute a rea
 - [x] Workflow cleanup removed the disposable PostgreSQL container. It used tmpfs storage; ephemeral test credentials were not printed. Existing local PostgreSQL container/volume, local .env, DATABASE_URL, and PEA working tree were not changed.
 
 **Acceptance result:** isolated runtime acceptance **PASSED** for the tested local application checkout and disposable PostgreSQL environment. This proves the API process used the restricted role and denied the tested cross-tenant request. It does **not** yet verify the persistent local database's app_runtime credential, persistent API configuration, backup/restore readiness, or every tenant-scoped endpoint. Those remain separate acceptance items.
+
+### 6.17 Persistent local PostgreSQL app_runtime privilege audit completed — 2026-11-14
+
+- [x] Reviewed successful [Local PEA runtime privilege audit run #1](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43522531750), job 132220125802, on self-hosted Runner AIStation.
+- [x] Read-only audit connected to the persistent local database `personal_expert` on localhost:5432 using the configured diagnostic login `personal_expert`; credentials and full connection URLs were withheld.
+- [x] `app_runtime` exists with `NOSUPERUSER`, `NOBYPASSRLS`, `NOCREATEDB`, `NOCREATEROLE`, `LOGIN`, `NOINHERIT`, `NOREPLICATION`; it has no role memberships.
+- [x] Database privileges: CONNECT=true, CREATE=false, TEMP=true. Public schema: USAGE=true, CREATE=false.
+- [x] All 29 application tables are owned by `personal_expert`. `app_runtime` has SELECT/INSERT/UPDATE/DELETE on all 29; it has no TRUNCATE, REFERENCES or TRIGGER privileges. 26 tables have RLS and FORCE RLS; `alembic_version`, `external_identities` and `users` do not have RLS/FORCE RLS.
+- [x] No application sequences currently exist (sequence_count=0).
+- [x] Existing default privileges for objects created by `personal_expert` in `public`: future tables grant `arwd` (SELECT/INSERT/UPDATE/DELETE) to `app_runtime`; future sequences grant `rU` (SELECT/USAGE). No explicit default privileges for other object types were reported.
+- [ ] Direct login as `app_runtime` was **not tested** because `APP_RUNTIME_DATABASE_URL` is not configured. The role has LOGIN=true, but successful password authentication has not been established.
+- [ ] Review whether full CRUD on all tables, especially the three tables without RLS, is necessary for the runtime application. Do not widen grants; consider narrowing only after mapping actual API/authentication use.
+- [ ] Provision a dedicated runtime credential through a secure interactive/non-logging path, configure a separate runtime URL for FastAPI, and test direct login plus actual API PostgreSQL session identity. Keep the owner/DDL URL separate for Alembic migrations.
+- [ ] Backup/restore readiness remains unverified. Do not switch the persistent API runtime until credential, direct-login, RLS and tenant-isolation checks are complete.
+- [x] The workflow performed no SQL writes, migrations, role/password/grant changes, container restarts or local project-file modifications.
+
+**Conclusion:** the persistent role's attributes and effective grants are now known. The role is appropriately non-privileged at the role/database/schema level, but its table-level CRUD grants are broad, including the three non-RLS tables. Direct password login and persistent FastAPI use remain unproven. Keep the existing connection unchanged until the table access review and secure credential plan are approved.
