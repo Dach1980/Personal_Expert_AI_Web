@@ -471,3 +471,21 @@ Security note: the runner account has Docker access to inspect and execute a rea
 - [ ] Run controlled API-level tenant isolation tests with two test tenants/users: authorized reads succeed only within the caller's tenant; cross-tenant reads and writes are denied. The no-context probe alone is not proof of tenant-to-tenant isolation.
 
 **Conclusion:** the restricted `app_runtime` role and fail-closed behavior on the 26 FORCE-RLS tables passed this read-only smoke test. The application is currently not running, and its runtime connection has not been proven. Overall PEA database runtime security is **not yet accepted** until the live API connection and cross-tenant negative tests pass.
+
+
+### 6.14 Isolated live FastAPI runtime acceptance prepared — 2026-11-14
+
+- [x] Reviewed PEA database bootstrap: `app/storage/database.py` currently reads `DATABASE_URL` for the application engine. Alembic `migrations/env.py` independently reads the same variable for DDL; the launch environment must therefore explicitly supply the runtime URL to FastAPI and the owner URL only to Alembic.
+- [x] Reviewed `docs/development/POSTGRES_RUNTIME_ROLE.md`: documented model already requires a non-owner, non-superuser, non-BYPASSRLS login for FastAPI and a separate schema-owner connection for migrations.
+- [x] Confirmed existing integration coverage in `tests/integration/test_postgres_tenant_isolation.py` and `tests/integration/test_tenant_discovery_api.py`: tests support separate `DATABASE_URL` (owner) and `APP_DATABASE_URL` (restricted runtime) and exercise tenant visibility, RLS, active/revoked membership and HTTP tenant discovery.
+- [x] Added private manual-only workflow [local-pea-runtime-acceptance.yml](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/blob/main/.github/workflows/local-pea-runtime-acceptance.yml); latest workflow commit: `3f1cb9bf6dfa44859027d3805fe062b6ea48e439`.
+- [x] Workflow creates a disposable PostgreSQL 16 instance on a separate loopback port with tmpfs-only storage, a temporary schema-owner role and a temporary `app_runtime` role. It applies current migrations only to this disposable database.
+- [x] Runs existing PostgreSQL tenant-isolation, tenant-discovery API, document-read security and Keycloak-auth tests against the disposable DB with separate owner/runtime URLs.
+- [x] Starts a real local Uvicorn FastAPI process bound only to `127.0.0.1`, uses a temporary local JWKS endpoint and ephemeral RS256 test identities, and exercises authenticated tenant discovery over HTTP.
+- [x] Verifies user A and user B see only their own tenant, own-tenant access returns HTTP 200, cross-tenant selection returns HTTP 404, and the live API's PostgreSQL backend is `app_runtime` (observed via `pg_stat_activity`).
+- [x] The FastAPI child process receives only the runtime URL; owner/bootstrap credentials are removed from its environment. All temporary credentials are generated at run time and never printed.
+- [x] Workflow does not read or change the real local `.env`, does not connect to the persistent `personal-expert-postgres` container/volume, does not modify tracked or untracked PEA files, and removes the disposable container on exit.
+- [ ] **Not yet executed.** The workflow is manual-only and must be dispatched from GitHub Actions while the self-hosted Runner `AIStation` is online.
+- [ ] **Real local database remains unchanged.** Its existing `app_runtime` password is not available to the assistant; no password rotation or `.env` edit was performed. After isolated acceptance passes, a separate explicit credential-provisioning step is needed to configure the real local FastAPI process without reusing the superuser connection.
+
+**Acceptance boundary:** this workflow validates the current local checkout's migrations, restricted-role grants, real FastAPI process, JWT/JWKS path and tenant API isolation on a disposable database. It does not certify the credentials or live runtime state of the persistent local database.
