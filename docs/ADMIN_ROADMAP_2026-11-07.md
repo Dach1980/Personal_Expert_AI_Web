@@ -279,3 +279,101 @@ Execute in this order, keeping all repository changes on `main` and preserving t
 - Do not trust tenant/project IDs or `X-Forwarded-Access-Token` supplied by the browser/model. Bionic must strip client-supplied forwarded identity and inject only verified identity.
 - Keep secrets, tokens, private documents and local database content out of Git and logs.
 - Distinguish source implementation, cryptographic token verification, API authorization, and complete browser/runtime acceptance as separate evidence levels.
+
+
+---
+
+## 6. PEA launch checklist and local Runner — 2026-11-14
+
+This section supersedes older "next step" notes where they conflict with the verified state below. It separates source/CI acceptance from local database acceptance and actual application startup.
+
+### 6.1 Local verification infrastructure — completed
+
+| Item | Status | Evidence |
+|---|---|---|
+| Separate private control repository created | DONE | [Personal_Expert_AI_Local_Control](https://github.com/Dach1980/Personal_Expert_AI_Local_Control) |
+| Manual-only local verification workflow added | DONE | `.github/workflows/local-pea-verification.yml` in the control repository; `workflow_dispatch` only |
+| WSL self-hosted Runner installed and connected | DONE | Runner `AIStation`, version 2.338.2; connected and listening for jobs |
+| Runner label configured for workflow routing | DONE | Workflow run was successfully assigned to `self-hosted, linux, x64, pea-local-control` |
+| First local Runner workflow | DONE | [Run #1 — 43512765531](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43512765531), manually started on `main`, completed successfully |
+| Isolated source checkout | DONE | Workflow cloned public PEA `main` into a temporary directory under `RUNNER_TEMP`; existing local working copy was not used |
+| Python source compilation | DONE | `compileall` passed; runner reported Python 3.12.16 |
+| Ruff | DONE | Ruff 0.17.4; `ruff check app migrations tests` — All checks passed |
+
+**Control repository:** [Dach1980/Personal_Expert_AI_Local_Control](https://github.com/Dach1980/Personal_Expert_AI_Local_Control). It is intentionally separate and private. Keep it private and keep the Runner registered at repository scope only. The workflow is manual-only; do not add push, pull-request, schedule or other untrusted triggers. The current source-smoke workflow does not access PostgreSQL, Keycloak, local `.env`, private documents or the existing local working tree.
+
+### 6.2 Backend and database verification — completed in CI, local acceptance pending
+
+| Item | Status | Evidence / next action |
+|---|---|---|
+| PostgreSQL 16 migration upgrade to head | DONE in GitHub CI | `database-ci.yml` |
+| Alembic schema consistency check | DONE in GitHub CI | `alembic check` passed |
+| Migration downgrade to base and re-upgrade | DONE in GitHub CI | Full migration cycle passed |
+| Restricted runtime DB role for RLS tests | DONE in GitHub CI | CI provisions `app_runtime` with NOSUPERUSER/NOBYPASSRLS and restores grants |
+| Tenant discovery HTTP tests | DONE in GitHub CI | Real FastAPI TestClient GET `/api/v1/tenants` under restricted runtime role |
+| Two-user/two-tenant API + RLS isolation | DONE in GitHub CI | Cross-user tenant discovery isolation test passed |
+| Membership revocation on subsequent request | DONE in GitHub CI | Existing JWT is denied after membership is revoked |
+| Full backend test suite | DONE in GitHub CI | 23 integration tests; 142 total tests; Ruff passed in run #475 |
+| Local PostgreSQL 16 container | PREVIOUSLY VERIFIED; recheck before use | Container `personal-expert-postgres` was healthy on 127.0.0.1:5432 during local setup. Confirm it is running now before local DB acceptance |
+| Local migrations and schema parity against AIStation PostgreSQL | TODO | Run using the local project environment and local database only |
+| Local restricted application role and RLS acceptance | TODO | Verify ownership, grants, FORCE RLS and NOSUPERUSER/NOBYPASSRLS; do not run application requests as table owner/superuser |
+
+**Important distinction:** green GitHub CI proves the migration and test suite against CI's disposable PostgreSQL service. It does not prove that migrations have been applied to the PostgreSQL instance on AIStation.
+
+### 6.3 Authentication — cryptographic smoke passed; live API/browser acceptance pending
+
+| Item | Status |
+|---|---|
+| Keycloak Authorization Code + PKCE S256 smoke | DONE |
+| ID token signature, issuer, audience and nonce verification | DONE |
+| Access token signature, issuer and `pea-api` audience verification | DONE |
+| Subject consistency between ID and access tokens | DONE |
+| Tokens kept in memory and not written to disk by smoke test | DONE |
+| Real HTTP request from browser through Web/Bionic to PEA | TODO |
+| PEA API authorization with real Keycloak token and active membership | TODO |
+| Login/logout/refresh/expiry/revocation in the Web UI | TODO |
+| System-admin authorization and audit event acceptance | TODO |
+
+Evidence: local OIDC PKCE smoke script and its seven tests passed on 2026-11-13. This verifies token issuance and cryptographic validation; it does not by itself prove the full browser-to-PEA runtime path.
+
+### 6.4 Checklist before the first local PEA API launch
+
+- [ ] Confirm WSL Runner is available when needed; keep it stopped when not running a trusted manual workflow.
+- [ ] Confirm Python 3.12 project interpreter and `.venv` are the ones used for PEA (the Runner's Python 3.12.16 source-smoke check is not proof that the project's virtual environment is configured).
+- [ ] Install/synchronize project dependencies in the PEA virtual environment.
+- [ ] Confirm local PostgreSQL 16 is healthy and the intended database is selected.
+- [ ] Review local `.env` without displaying or copying secrets; confirm it is ignored by Git.
+- [ ] Apply Alembic migrations to the local PEA database and verify current revision equals head.
+- [ ] Verify local schema parity and run PostgreSQL integration tests, including tenant isolation and membership revocation.
+- [ ] Verify the API runtime role is restricted and RLS is enforced; do not use the schema owner or a superuser for normal API requests.
+- [ ] Confirm local storage paths exist and are not inside tracked source directories.
+- [ ] Start FastAPI bound to the intended local development interface.
+- [ ] Verify `/health`, OpenAPI and a database-backed endpoint.
+- [ ] Stop the API and verify it reports a clear failure when PostgreSQL is unavailable.
+
+**First API launch acceptance:** FastAPI starts reproducibly, connects to the local PostgreSQL database using the restricted runtime role, returns a healthy status, and cannot bypass tenant isolation.
+
+### 6.5 Checklist after the first API launch — before integrated product acceptance
+
+- [ ] Configure PEA's LM Studio provider using the verified WSL-to-Windows endpoint; test a Russian completion through PEA, not only directly against LM Studio.
+- [ ] Verify streaming, timeout, cancellation, unavailable model and embedding behavior; prove there is no cloud fallback.
+- [ ] Upload a harmless test document and verify immutable version, checksum, processing job, SourceFragments, locators and artifacts.
+- [ ] Verify download authorization and malformed/duplicate/oversized upload handling.
+- [ ] Complete Keycloak → Web → trusted Bionic Adapter → PEA live authentication and membership authorization.
+- [ ] Test tenant/project switching and IDOR/cross-tenant access through real HTTP requests.
+- [ ] Complete conversation-scoped interactive `pea_search`; derive scope from verified identity, enforce ACL before prompt construction, and preserve exact fragment/version citations.
+- [ ] Implement and accept the PEA-owned Hermes-inspired Memory Engine only after interactive retrieval; test write → new conversation → retrieval/reuse and cross-user/project isolation.
+- [ ] Complete browser E2E and negative security tests; inspect logs for secret/document leakage.
+
+### 6.6 Launch gates and definition of done
+
+1. **Gate A — API boot:** Python environment, dependencies, local DB migrations, restricted DB role, health and database-backed endpoint pass.
+2. **Gate B — local AI and documents:** PEA-to-LM Studio inference and document ingestion/processing pass without cloud fallback.
+3. **Gate C — identity and isolation:** real Keycloak login, PEA membership checks, tenant/project switching and PostgreSQL RLS pass.
+4. **Gate D — integrated product:** Bionic interactive retrieval, grounded citations, audit and memory acceptance pass.
+
+A successful source-smoke Runner job is not an application launch. A successful API health check is not integrated product acceptance. The product is ready only when all four gates pass.
+
+### 6.7 Safe next execution step
+
+Do not expand the self-hosted Runner workflow to execute arbitrary project code or use local secrets. First perform a read-only preflight of the existing local PostgreSQL service and Python environment. Then prepare a narrowly scoped, manual-only database verification job with explicit database target checks and a restricted test role. Keep the workflow in the private control repository, do not add pull-request triggers, and never expose local `.env`, Keycloak credentials, tokens or private document data in logs.
