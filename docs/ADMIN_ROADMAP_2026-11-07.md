@@ -502,3 +502,19 @@ Security note: the runner account has Docker access to inspect and execute a rea
 - [x] Failure occurred before pytest collected tests and before FastAPI was launched. The cleanup trap removed the disposable PostgreSQL container. The persistent PostgreSQL container/volume, local .env, and local PEA working tree were not targeted or changed by the workflow.
 
 **Acceptance status:** not passed yet. No claim is made about the live API database role or two-tenant HTTP isolation until a successful retry verifies those steps.
+
+
+### 6.16 Local PEA runtime acceptance passed — 2026-11-14
+
+- [x] Reviewed successful [Local PEA runtime acceptance run #2](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43520735502), job 132214038738, on self-hosted Runner AIStation.
+- [x] Test/migration source was a fresh isolated clone of public PEA main at commit 4af19d3. Alembic upgraded the disposable PostgreSQL 16 database through 0015_bionic_retrieval_delegation.
+- [x] app_runtime least-privilege flags verified: NOSUPERUSER, NOBYPASSRLS, NOCREATEDB, NOCREATEROLE, LOGIN. Schema/table/sequence grants were applied only to the disposable test database.
+- [x] Existing PostgreSQL and tenant API integration/security suite: **37 passed**.
+- [x] Live FastAPI smoke test launched from the local PEA checkout. Health endpoint returned HTTP 200.
+- [x] RS256 JWT validation using the temporary local JWKS endpoint passed (signature, issuer and audience).
+- [x] Two test identities were isolated: each GET /api/v1/tenants response contained only that identity's own tenant.
+- [x] Own-tenant request returned HTTP 200; cross-tenant request returned HTTP 404.
+- [x] PostgreSQL pg_stat_activity confirmed the live FastAPI database session used **app_runtime**, not the schema-owner or superuser role.
+- [x] Workflow cleanup removed the disposable PostgreSQL container. It used tmpfs storage; ephemeral test credentials were not printed. Existing local PostgreSQL container/volume, local .env, DATABASE_URL, and PEA working tree were not changed.
+
+**Acceptance result:** isolated runtime acceptance **PASSED** for the tested local application checkout and disposable PostgreSQL environment. This proves the API process used the restricted role and denied the tested cross-tenant request. It does **not** yet verify the persistent local database's app_runtime credential, persistent API configuration, backup/restore readiness, or every tenant-scoped endpoint. Those remain separate acceptance items.
