@@ -489,3 +489,16 @@ Security note: the runner account has Docker access to inspect and execute a rea
 - [ ] **Real local database remains unchanged.** Its existing `app_runtime` password is not available to the assistant; no password rotation or `.env` edit was performed. After isolated acceptance passes, a separate explicit credential-provisioning step is needed to configure the real local FastAPI process without reusing the superuser connection.
 
 **Acceptance boundary:** this workflow validates the current local checkout's migrations, restricted-role grants, real FastAPI process, JWT/JWKS path and tenant API isolation on a disposable database. It does not certify the credentials or live runtime state of the persistent local database.
+
+
+### 6.15 Runtime acceptance first attempt failed; workflow source isolation corrected — 2026-11-14
+
+- [x] Reviewed [Local PEA runtime acceptance run #1](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43520247929) and its complete self-hosted Runner log.
+- [x] Disposable PostgreSQL 16 container started successfully; temporary pea_owner and restricted app_runtime roles were created with the expected least-privilege flags.
+- [x] Alembic successfully applied migrations through 0015_bionic_retrieval_delegation in the disposable database.
+- [ ] Test phase did not start: pytest exited with code 4 because tests/integration/test_tenant_discovery_api.py was absent from the local working checkout used by the workflow. The same test file exists in public PEA main; this indicates a source-checkout mismatch, not a demonstrated test or application failure.
+- [x] Corrected the private workflow in commit f3a76c0994207add881b199c4b21edfc5e7c5906: integration tests and Alembic migrations now run from a fresh shallow clone of public PEA main in RUNNER_TEMP; the subsequent live FastAPI/JWT/JWKS/tenant-isolation smoke test still launches the application from the local PEA checkout.
+- [ ] Retry required. Manually dispatch [Local PEA runtime acceptance](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/workflows/local-pea-runtime-acceptance.yml) again while Runner AIStation is listening, then review the complete log.
+- [x] Failure occurred before pytest collected tests and before FastAPI was launched. The cleanup trap removed the disposable PostgreSQL container. The persistent PostgreSQL container/volume, local .env, and local PEA working tree were not targeted or changed by the workflow.
+
+**Acceptance status:** not passed yet. No claim is made about the live API database role or two-tenant HTTP isolation until a successful retry verifies those steps.
