@@ -405,3 +405,19 @@ Security note: the runner account has Docker access to inspect and execute a rea
 **Result:** local runtime prerequisites and PostgreSQL service readiness are confirmed. This does not yet establish which database/schema the application will target, current Alembic revision, backup recoverability, restricted runtime-role configuration, or API readiness.
 
 **Next gate — read-only database target and migration safety inspection:** identify the effective database host/name/user without exposing credentials; inspect PostgreSQL database/volume identity, current Alembic revision and migration head; verify backup/restore strategy and runtime-role constraints. Only after these checks should a separate migration step be considered. Do not apply migrations to an unidentified or production-like database.
+
+
+### 6.10 Read-only database safety inspection prepared — 2026-11-14
+
+- [x] Added [local-pea-db-inspection.yml](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/blob/main/.github/workflows/local-pea-db-inspection.yml) to the private control repository.
+- [x] Manual-only dispatch on the owner-controlled self-hosted Runner; no push, pull-request or schedule trigger.
+- [x] Reports effective DB target host, port, database and username, plus whether a password is configured; full URL and credentials are never printed. Resolution follows runtime `DATABASE_URL`, local `.env`, then the documented `alembic.ini` fallback.
+- [x] Reads the applied `alembic_version` revision(s), compares them with migration heads from the local source tree and lists pending revisions when the history is linear.
+- [x] Reports the existing PostgreSQL container state and persistent mount metadata, without inspecting container environment variables.
+- [x] Reads PostgreSQL role flags for the connected role and `app_runtime`, plus aggregate table ownership/RLS-enabled/RLS-forced counts.
+- [x] Read-only only: no migrations, SQL writes, role/grant changes, backup operations, container restarts or local project-file changes.
+- [ ] **Not yet executed.** Manually start **Actions → Local PEA database safety inspection → Run workflow** in the private control repository while Runner `AIStation` is online, then review the complete job log. Do not start migrations based on the workflow merely being present.
+
+**Source configuration note:** the checked-in `migrations/env.py` reads `DATABASE_URL`; if absent, Alembic retains the `sqlalchemy.url` from `alembic.ini`. The checked-in fallback points to `localhost:5432/personal_expert` as user `personal_expert`. The workflow reports the effective local value without exposing its password. This is a configuration default, not evidence that this is the database currently in use.
+
+**Next gate:** inspect the run result and verify the target is the intended local PEA database, confirm volume identity and a recoverable backup, then assess Alembic drift and whether the application role is genuinely restricted. No migration is authorized or performed by this inspection.
