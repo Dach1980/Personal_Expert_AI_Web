@@ -435,3 +435,20 @@ Security note: the runner account has Docker access to inspect and execute a rea
 - The job performed catalog reads only: no migrations, SQL writes, role changes, backups, restarts or local project-file modifications.
 
 **Decision / safety gate:** do not run migrations using the currently resolved `personal_expert` superuser connection. There are no pending migrations at the inspected source head, so migration execution is unnecessary at present. Before enabling runtime operation, verify the actual application connection path uses `app_runtime`, test RLS as that role (including tenant isolation), inspect grants/policies and ownership, and establish a recoverable backup/restore procedure. No state-changing action is authorized by this read-only result.
+
+
+
+### 6.12 Read-only application runtime and app_runtime RLS inspection prepared — 2026-11-14
+
+- [x] Added [local-pea-runtime-rls-inspection.yml](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/blob/main/.github/workflows/local-pea-runtime-rls-inspection.yml) to the private local-control repository; latest workflow commit: `35341b68a27689082dba01c720cca604be2a1845`.
+- [x] Manual-only `workflow_dispatch`, private self-hosted Runner labels, read-only PostgreSQL transaction; no push/PR/schedule triggers.
+- [x] Checks whether a PEA API process is running and, where readable, inspects only its database URL variable names/values in memory. Process command arguments and environment values are never printed.
+- [x] Reports only sanitized DB target metadata and role identity; never prints credentials or full connection URLs.
+- [x] Switches to `app_runtime` inside a read-only transaction, then inspects database/schema access, table SELECT grants, RLS/FORCE RLS flags and policy metadata.
+- [x] Probes SELECT visibility on FORCE-RLS tables with no `app.user_id`, `app.tenant_id` or `app.bionic_workload` context; reports table names only, never row contents.
+- [x] Distinguishes a live application-process connection from a diagnostic `SET ROLE app_runtime` test. A role-switch test alone does not prove that the API authenticates with app_runtime.
+- [x] No migrations, SQL writes, role/grant changes, data updates, container restarts, backup operations or local project-file modifications.
+- [ ] **Not yet executed.** Manually start **Actions → Local PEA runtime and RLS inspection → Run workflow** in the private repository while Runner `AIStation` is online. Review the complete job log before accepting runtime DB security.
+- [ ] If no live PEA API process is detected, the run can validate `app_runtime` behavior through `SET ROLE`, but a separate live API launch/connection check will still be required to prove the actual application connection identity.
+
+**Safety boundary:** the workflow intentionally does not alter the current `DATABASE_URL`, create/rotate credentials, change table ownership or grants, or attempt tenant-data reads. Do not interpret a successful workflow run as proof of cross-tenant isolation; the no-context probe is a fail-closed smoke test, while full tenant isolation still requires controlled test identities and an API-level negative test.
