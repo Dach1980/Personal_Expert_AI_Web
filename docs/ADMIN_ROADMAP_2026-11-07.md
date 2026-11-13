@@ -389,3 +389,19 @@ Do not expand the self-hosted Runner workflow to execute arbitrary project code 
 - [ ] After reviewing the preflight result, decide whether to run local migrations and PostgreSQL integration/RLS tests. These are a separate, potentially state-changing stage and require an explicit database target and backup/volume check.
 
 Security note: the runner account has Docker access to inspect and execute a readiness command inside the existing PostgreSQL container. Docker-group access is effectively root-equivalent on the WSL host. Keep this private repository owner-only, retain manual-only triggers, and stop the runner when not in use.
+
+
+### 6.9 Local read-only preflight executed successfully — 2026-11-14
+
+- [x] Manually dispatched [Local PEA preflight run #2](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43514392679) on `main`; completed successfully on self-hosted Runner `AIStation` in 15 seconds.
+- [x] Local PEA path exists: `/mnt/d/Projects/Personal_Expert_AI`.
+- [x] Project virtual environment exists and reports Python 3.12.16.
+- [x] Local `.env` exists and Git confirms it is ignored; its contents were not read or printed.
+- [x] Docker daemon is reachable by the Runner.
+- [x] Existing `personal-expert-postgres` container reports `running` and `healthy`.
+- [x] `pg_isready` reports `127.0.0.1:5432 - accepting connections`.
+- [x] Job log confirms no migrations, SQL writes, container restarts or project file changes were performed.
+
+**Result:** local runtime prerequisites and PostgreSQL service readiness are confirmed. This does not yet establish which database/schema the application will target, current Alembic revision, backup recoverability, restricted runtime-role configuration, or API readiness.
+
+**Next gate — read-only database target and migration safety inspection:** identify the effective database host/name/user without exposing credentials; inspect PostgreSQL database/volume identity, current Alembic revision and migration head; verify backup/restore strategy and runtime-role constraints. Only after these checks should a separate migration step be considered. Do not apply migrations to an unidentified or production-like database.
