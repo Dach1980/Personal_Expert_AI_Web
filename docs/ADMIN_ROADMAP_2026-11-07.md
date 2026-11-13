@@ -421,3 +421,17 @@ Security note: the runner account has Docker access to inspect and execute a rea
 **Source configuration note:** the checked-in `migrations/env.py` reads `DATABASE_URL`; if absent, Alembic retains the `sqlalchemy.url` from `alembic.ini`. The checked-in fallback points to `localhost:5432/personal_expert` as user `personal_expert`. The workflow reports the effective local value without exposing its password. This is a configuration default, not evidence that this is the database currently in use.
 
 **Next gate:** inspect the run result and verify the target is the intended local PEA database, confirm volume identity and a recoverable backup, then assess Alembic drift and whether the application role is genuinely restricted. No migration is authorized or performed by this inspection.
+
+
+### 6.11 Local database safety inspection executed — 2026-11-14
+
+- <badge color="success">PASS</badge> [Local PEA database safety inspection — run #3](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43515834939), self-hosted Runner `AIStation`.
+- Effective target resolved from runner environment (credentials withheld): PostgreSQL `localhost:5432`, database `personal_expert`, connection role `personal_expert`. Server reported `172.18.0.2:5432`, not in recovery.
+- Container `personal-expert-postgres`: running and healthy. Persistent Docker volume: `personal_expert_ai_postgres_data`, mounted at `/var/lib/postgresql/data`.
+- Alembic applied revision: `0015_bionic_retrieval_delegation`; source head: `0015_bionic_retrieval_delegation`; pending migrations: **0**.
+- Role `app_runtime` exists and is reported as non-superuser, no BYPASSRLS, no CREATEDB/CREATEROLE, LOGIN enabled.
+- Connection role `personal_expert` is **superuser with BYPASSRLS, CREATEDB and CREATEROLE**. It owns all 29 application tables. Catalog summary: 29 tables, 26 with RLS enabled and forced. This means the inspection connection bypasses RLS; the result does **not** prove that the application actually connects as `app_runtime` or that its effective grants/policies are least-privilege.
+- Backup/restore readiness was **not inspected** by this workflow. No backup existence, recency or restore test is confirmed.
+- The job performed catalog reads only: no migrations, SQL writes, role changes, backups, restarts or local project-file modifications.
+
+**Decision / safety gate:** do not run migrations using the currently resolved `personal_expert` superuser connection. There are no pending migrations at the inspected source head, so migration execution is unnecessary at present. Before enabling runtime operation, verify the actual application connection path uses `app_runtime`, test RLS as that role (including tenant isolation), inspect grants/policies and ownership, and establish a recoverable backup/restore procedure. No state-changing action is authorized by this read-only result.
