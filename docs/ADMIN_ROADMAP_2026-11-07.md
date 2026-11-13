@@ -377,3 +377,15 @@ A successful source-smoke Runner job is not an application launch. A successful 
 ### 6.7 Safe next execution step
 
 Do not expand the self-hosted Runner workflow to execute arbitrary project code or use local secrets. First perform a read-only preflight of the existing local PostgreSQL service and Python environment. Then prepare a narrowly scoped, manual-only database verification job with explicit database target checks and a restricted test role. Keep the workflow in the private control repository, do not add pull-request triggers, and never expose local `.env`, Keycloak credentials, tokens or private document data in logs.
+
+
+### 6.8 Local read-only preflight workflow prepared — 2026-11-14
+
+- [x] Added a separate manual-only workflow in the private control repository: [local-pea-preflight.yml](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/blob/main/.github/workflows/local-pea-preflight.yml).
+- [x] It checks the expected local PEA directory, reports whether the project virtualenv exists and its Python version, and checks .env presence/ignore status without reading its contents.
+- [x] It checks Docker daemon reachability, the existing personal-expert-postgres container state/health and PostgreSQL readiness using pg_isready.
+- [x] It does not run migrations, execute SQL writes, restart containers, modify project files, or print secrets.
+- [ ] Not yet executed: the workflow must be manually started from GitHub Actions while the WSL Runner is online. No local PostgreSQL status is claimed until its log is reviewed.
+- [ ] After reviewing the preflight result, decide whether to run local migrations and PostgreSQL integration/RLS tests. These are a separate, potentially state-changing stage and require an explicit database target and backup/volume check.
+
+Security note: the runner account has Docker access to inspect and execute a readiness command inside the existing PostgreSQL container. Docker-group access is effectively root-equivalent on the WSL host. Keep this private repository owner-only, retain manual-only triggers, and stop the runner when not in use.
