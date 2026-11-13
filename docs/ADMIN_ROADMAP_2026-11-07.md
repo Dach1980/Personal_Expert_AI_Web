@@ -452,3 +452,22 @@ Security note: the runner account has Docker access to inspect and execute a rea
 - [ ] If no live PEA API process is detected, the run can validate `app_runtime` behavior through `SET ROLE`, but a separate live API launch/connection check will still be required to prove the actual application connection identity.
 
 **Safety boundary:** the workflow intentionally does not alter the current `DATABASE_URL`, create/rotate credentials, change table ownership or grants, or attempt tenant-data reads. Do not interpret a successful workflow run as proof of cross-tenant isolation; the no-context probe is a fail-closed smoke test, while full tenant isolation still requires controlled test identities and an API-level negative test.
+
+
+### 6.13 Local runtime / RLS inspection executed — 2026-11-14
+
+- [x] Manual workflow run [#1 — Local PEA runtime and RLS inspection](https://github.com/Dach1980/Personal_Expert_AI_Local_Control/actions/runs/43518190937) completed successfully on self-hosted Runner `AIStation`.
+- [x] Local PostgreSQL accepted connections; target was database `personal_expert` on localhost:5432. Credentials were not emitted.
+- [x] No running PEA API process (uvicorn/gunicorn/PEA API) was detected. Therefore the run did **not** establish the actual application's runtime database identity or prove that the API uses `app_runtime`.
+- [x] The configured diagnostic connection used `personal_expert`; effective role was `personal_expert`, not `app_runtime`. This is the previously identified privileged connection and must not be accepted as the production/runtime role.
+- [x] `app_runtime` exists and passed basic least-privilege role flags: `NOSUPERUSER`, `NOBYPASSRLS`, `NOCREATEDB`, `NOCREATEROLE`, `LOGIN`. Diagnostic session could switch to `app_runtime` with `SET LOCAL ROLE`.
+- [x] Under `app_runtime`, database CONNECT and public schema USAGE passed; SELECT privilege was present on all 29 catalogued application tables.
+- [x] 26 tables have both RLS and FORCE RLS. Three tables do not: `alembic_version`, `external_identities`, `users`. These are not included in the no-context RLS probe; their access and exposure need explicit review rather than assuming they are tenant-isolated.
+- [x] 33 RLS policies were inventoried by name/command and presence of USING/WITH CHECK expressions; policy expressions themselves and row data were not printed.
+- [x] No-context fail-closed probe under `app_runtime`: 26 FORCE-RLS tables probed, zero tables returned any row, zero probe errors.
+- [x] No migrations, SQL writes, role/grant changes, data updates, container restarts or local project-file modifications.
+- [ ] **Runtime authorization gate remains open.** Start the PEA API with a dedicated `app_runtime` database credential, then verify the API's actual PostgreSQL session identity. Do not reuse the superuser `personal_expert` connection for application runtime.
+- [ ] Review the three non-RLS tables (`users`, `external_identities`, `alembic_version`) and validate whether their current grants/usage are appropriate.
+- [ ] Run controlled API-level tenant isolation tests with two test tenants/users: authorized reads succeed only within the caller's tenant; cross-tenant reads and writes are denied. The no-context probe alone is not proof of tenant-to-tenant isolation.
+
+**Conclusion:** the restricted `app_runtime` role and fail-closed behavior on the 26 FORCE-RLS tables passed this read-only smoke test. The application is currently not running, and its runtime connection has not been proven. Overall PEA database runtime security is **not yet accepted** until the live API connection and cross-tenant negative tests pass.
