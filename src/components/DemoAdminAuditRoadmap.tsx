@@ -2,7 +2,7 @@ const roadmap = [
   { title: "PEA API и локальная база", status: "ПОДТВЕРЖДЕНО: FastAPI запущен, GET /health вернул HTTP 200; PostgreSQL 16 работает локально." },
   { title: "Keycloak / OIDC PKCE", status: "ПОДТВЕРЖДЕНО: realm stack-app, клиент pea-web; PKCE S256, RS256/JWKS, issuer, audience и nonce прошли smoke test." },
   { title: "Пользователь, tenant и проект", status: "ПОДТВЕРЖДЕНО: пользователь и membership созданы; tenant Personal Expert AI и проект Первый проект существуют. Правильная identity mapping создана." },
-  { title: "Авторизованный PEA API", status: "СЛЕДУЮЩИЙ ШАГ: ещё не приняты GET /api/v1/session, GET /api/v1/tenants и GET /api/v1/projects с X-Tenant-ID и реальным access token." },
+  { title: "Авторизованный PEA API", status: "P0 — контракт сверен с исходным кодом. Остался локальный прогон: /session → userId; /tenants → Personal Expert AI (owner); /projects + X-Tenant-ID → Первый проект. Токен не публиковать." },
   { title: "Bionic fork и PEA Adapter", status: "НЕ ГОТОВО: fork-specific runtime не подтверждён как развёрнутый; нужно исправить stack-app issuer/JWKS, собрать fork image и поднять защищённый Adapter." },
   { title: "Настоящий Web-интерфейс", status: "КОД ЕСТЬ: React UI, OIDC client, tenant/project selector, чат и DocumentWorkspace. GitHub Pages сейчас demo mode; live Web → Adapter → PEA не принято." },
   { title: "Загрузка и обработка документов", status: "НЕ ПРИНЯТО: нужно проверить upload → immutable version → worker → SourceFragments/artifacts в реальном окружении." },
