@@ -6,7 +6,7 @@ const roadmap = [
   { title: "PEA API и локальная база", status: "ПОДТВЕРЖДЕНО: FastAPI запущен, GET /health вернул HTTP 200; PostgreSQL 16 работает локально." },
   { title: "Keycloak / OIDC PKCE", status: "ПОДТВЕРЖДЕНО: realm stack-app, клиент pea-web; PKCE S256, RS256/JWKS, issuer, audience и nonce прошли smoke test." },
   { title: "Пользователь, tenant и проект", status: "ПОДТВЕРЖДЕНО: пользователь и membership созданы; tenant Personal Expert AI и проект Первый проект существуют. Правильная identity mapping создана." },
-  { title: "Авторизованный PEA API", status: "СЛЕДУЮЩИЙ ШАГ: ещё не приняты GET /api/v1/session, GET /api/v1/tenants и GET /api/v1/projects с X-Tenant-ID и реальным access token." },
+  { title: "Авторизованный PEA API", status: "P0 — API-контракт сверен с app/api/auth.py и routes.py. Остался один локальный прогон: /session (200, userId), /tenants (200, Personal Expert AI, owner), /projects + X-Tenant-ID 2714a044-b972-4594-a0fb-c188cce390e2 (200, Первый проект). ChatGPT не может обращаться к localhost пользователя; токен не публиковать." },
   { title: "Bionic fork и PEA Adapter", status: "НЕ ГОТОВО: fork-specific runtime не подтверждён как развёрнутый; нужно исправить stack-app issuer/JWKS, собрать fork image и поднять защищённый Adapter." },
   { title: "Настоящий Web-интерфейс", status: "КОД ЕСТЬ: React UI, OIDC client, tenant/project selector, чат и DocumentWorkspace. GitHub Pages сейчас demo mode; live Web → Adapter → PEA не принято." },
   { title: "Загрузка и обработка документов", status: "НЕ ПРИНЯТО: нужно проверить upload → immutable version → worker → SourceFragments/artifacts в реальном окружении." },
@@ -14,7 +14,7 @@ const roadmap = [
 ];
 
 const tomorrowPlan = [
-  "P0 — выполнить авторизованные GET /api/v1/session, GET /api/v1/tenants и GET /api/v1/projects с X-Tenant-ID. Токен не выводить и не передавать в переписке.",
+  "P0 — один локальный прогон: GET /api/v1/session → userId; GET /api/v1/tenants → Personal Expert AI (owner); GET /api/v1/projects с X-Tenant-ID 2714a044-b972-4594-a0fb-c188cce390e2 → Первый проект. Access token вводить скрыто, не печатать/не пересылать. После результатов сразу P1.",
   "P1 — развернуть fork-specific Bionic image: исправить старые bionic-gpt issuer/JWKS URLs на stack-app, проверить конфигурацию и поднять защищённый PEA Adapter.",
   "P2 — собрать PEA Web в production mode с реальным Keycloak и HTTPS Adapter; открыть интерфейс и пройти login/logout.",
   "P3 — убедиться, что после входа видны tenant Personal Expert AI и проект Первый проект.",
