@@ -1,26 +1,7 @@
+import { ProjectHandoff } from './ProjectHandoff';
 import { useEffect, useState } from 'react';
 import { apiClient } from '../services/api/client';
 import type { SystemAdminMe, SystemAuditEvent, TenantRecord } from '../types';
-
-const roadmap = [
-  { title: "PEA API и локальная база", status: "ПОДТВЕРЖДЕНО: FastAPI запущен, GET /health вернул HTTP 200; PostgreSQL 16 работает локально." },
-  { title: "Keycloak / OIDC PKCE", status: "ПОДТВЕРЖДЕНО: realm stack-app, клиент pea-web; PKCE S256, RS256/JWKS, issuer, audience и nonce прошли smoke test." },
-  { title: "Пользователь, tenant и проект", status: "ПОДТВЕРЖДЕНО: пользователь и membership созданы; tenant Personal Expert AI и проект Первый проект существуют. Правильная identity mapping создана." },
-  { title: "Авторизованный PEA API", status: "P0 — API-контракт сверен с app/api/auth.py и routes.py. Остался один локальный прогон: /session (200, userId), /tenants (200, Personal Expert AI, owner), /projects + X-Tenant-ID 2714a044-b972-4594-a0fb-c188cce390e2 (200, Первый проект). ChatGPT не может обращаться к localhost пользователя; токен не публиковать." },
-  { title: "Bionic fork и PEA Adapter", status: "НЕ ГОТОВО: fork-specific runtime не подтверждён как развёрнутый; нужно исправить stack-app issuer/JWKS, собрать fork image и поднять защищённый Adapter." },
-  { title: "Настоящий Web-интерфейс", status: "КОД ЕСТЬ: React UI, OIDC client, tenant/project selector, чат и DocumentWorkspace. GitHub Pages сейчас demo mode; live Web → Adapter → PEA не принято." },
-  { title: "Загрузка и обработка документов", status: "НЕ ПРИНЯТО: нужно проверить upload → immutable version → worker → SourceFragments/artifacts в реальном окружении." },
-  { title: "Вопросы по документам с citations", status: "НЕ ГОТОВО: требуется interactive pea_search в Bionic Agent Runtime, ACL до prompt и citations с provenance реальных фрагментов." },
-];
-
-const tomorrowPlan = [
-  "P0 — один локальный прогон: GET /api/v1/session → userId; GET /api/v1/tenants → Personal Expert AI (owner); GET /api/v1/projects с X-Tenant-ID 2714a044-b972-4594-a0fb-c188cce390e2 → Первый проект. Access token вводить скрыто, не печатать/не пересылать. После результатов сразу P1.",
-  "P1 — развернуть fork-specific Bionic image: исправить старые bionic-gpt issuer/JWKS URLs на stack-app, проверить конфигурацию и поднять защищённый PEA Adapter.",
-  "P2 — собрать PEA Web в production mode с реальным Keycloak и HTTPS Adapter; открыть интерфейс и пройти login/logout.",
-  "P3 — убедиться, что после входа видны tenant Personal Expert AI и проект Первый проект.",
-  "P4 — загрузить тестовый PDF, проверить immutable version, worker processing и появление SourceFragments/artifacts.",
-  "P5 — подключить interactive pea_search и проверить ответ по документу с citations. После этого можно принимать первый рабочий сценарий.",
-];
 
 export function AdminAuditRoadmap() {
   const [admin, setAdmin] = useState<SystemAdminMe | null>(null);
@@ -97,15 +78,7 @@ export function AdminAuditRoadmap() {
         )}
       </section>
 
-      <section className="panel admin-panel admin-wide">
-        <div className="panel-heading"><div><h2>Roadmap Personal Expert AI</h2><p>Состояние на 14 ноября 2026. Здесь отделены подтверждённые факты от непроверенных интеграций.</p></div></div>
-        <div className="admin-list">{roadmap.map((item, index) => (
-          <div className="admin-row roadmap-row" key={item.title}><span><b>{index + 1}. {item.title}</b><small>{item.status}</small></span></div>
-        ))}</div>
-        <div className="panel-heading"><div><h3>Краткий план до первого рабочего сценария</h3><p>Выполнять по порядку; переход к deployment — только после прохождения security и configuration gates.</p></div></div>
-        <ol className="admin-list">{tomorrowPlan.map((item) => <li className="admin-row roadmap-row" key={item}>{item}</li>)}</ol>
-        <p className="muted"><a href="https://github.com/Dach1980/Personal_Expert_AI_Web/blob/main/docs/WORKING_INTERFACE_ROADMAP_2026-11-14.md" target="_blank" rel="noreferrer">Краткий roadmap до рабочего интерфейса и документов</a></p>
-      </section>
+      <ProjectHandoff />
     </div>
   );
 }
